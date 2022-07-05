@@ -12,11 +12,11 @@
 ## clean environment
 rm(list=ls())
 
-## Llamar/instalar las librerías 
+## Llamar/instalar las librerías, usamos pacman para llamar e instalar si es necesario las librerias que necesitamos
 require(pacman)
-p_load(tidyverse,    #Limpiar datos
-       caret, 
-       rio, 
+p_load(tidyverse,    #Para limpiar los datos
+       caret,        #Para la clasificación y regresiones
+       rio,          #Para importar datos
        modelsummary, # msummary
        gamlr,        # cv.gamlr >la que nos permite hacer lasso
        class,
@@ -29,7 +29,8 @@ p_load(tidyverse,    #Limpiar datos
 
 ##cargar los datos
 
-setwd("C:\Users\SARA\Documents\ESPECIALIZACIÓN\BIG DATA\GITHUB\ProblemSet2_Cely_Ospina\scripts")
+setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
+#setwd(aqui pon el tuuyo)
 
 ##Aquí no estoy segura si las bases antes de trabajarlas van en la carpeta de stores o en una carpeta de Data
 ##traer las bases de train y de test
@@ -44,11 +45,26 @@ test_personas<-readRDS("stores/test_personas.Rds")
 train<-merge(train_hogares,train_personas, by="id")
 test<-merge(test_hogares,test_personas, by="id")
 
+#Esto es para verlas en excel (mas facil para mi pero lo podemos borrar despues)
+export(list(train_hogares = train_hogares, train_personas = train_personas, test_hogares = test_hogares, test_personas=test_personas), "train_personas.xlsx")
+
+##escoger las variables que vamos a usar en el modelo
+
+#De la base de hogares: 
+#Ingtotugarr (ingreso total de la unidad de gasto luego de imputaciones)
+#Nper (personas en el hogar)
+
+#De la base personas: 
+#P6020 (sexo)
+#Oc (Ocupado)
+
+
+
 ##Volver factor las variables categóricas
 
 
 
-##Revisar NA por variables y escoger las variables que vamos a usar en el modelo
+##Revisar NA por variables y 
 
 
 
