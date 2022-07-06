@@ -132,7 +132,9 @@ testing<-other[-split2]
 
 ##Estadísticas descriptivas: (SE HACE ANTES O DESPUES DE DIVIDIR LA BASE EN 3?)
 
-stargazer(train[c("Nper", "Ingtotugarr", "total_female", "num_ocu", "menores", "Ingtot_jh", "max_educ_jh", "num_afsalud" )], type = "text")
+skim(train_hogares)
+stargazer(train[c( )], type = "text")
+
 
 ###################
 ##Predecir pobreza
