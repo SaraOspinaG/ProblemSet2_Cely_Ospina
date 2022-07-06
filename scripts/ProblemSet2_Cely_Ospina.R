@@ -25,7 +25,7 @@ p_load(tidyverse,    #Para limpiar los datos
        rvest,
        dplyr,
        stargazer)       
-
+##model y alternate cutoffs
 
 ##cargar los datos
 
@@ -92,8 +92,9 @@ edad<-train_personas$P6040
 Ingtot<- train_hogares$Ingtot
 menoreshogar<-ifelse(train$edad<18,1,0)
 afiliado<-ifelse(train_personas$P6090==2,1,0) #aqui falta que el 9 debería ser na creo
-#estrato
-#maxeduc
+#Estrato1: 1,2y3 son bajos según el DNP pero no se si necesariamente pobre (bajo y bajo-bajo son 1 y 2, 3 es medio-bajo)
+#maxeduc P6210
+#vivienda propia P9050
 #falta incluir la de educación y estrat, no estoy segura como incluir mas de una 
 
 
@@ -113,10 +114,25 @@ train_hogares <-train_hogares %>% left_join(DB,by="id")
 
 ##Escalar variables (?)
 
+##Dividir la base en 3: Entrenamiento, evaluacion y prueba
+
+##Primero partimos la base de entrenamiento, se parte en 80% - 20% por ser la forma en la que se comporta la variable de pobreza 
+set.seed(123)
+split1<-createDataPartition(DB$Pobre = .8)[[1]]
+length(split1)
+
+other<-DB[-split1]
+training <-DB[split1]
+
+##Ahora partimos para obtener las bases de evaluacion y prueba
+split2<- createDataPartition(other$Pobre, p=1/3) [[1]]
+evaluation<-other[split2]
+testing<-other[-split2]
 
 
-##Estadísticas descriptivas
+##Estadísticas descriptivas: (SE HACE ANTES O DESPUES DE DIVIDIR LA BASE EN 3?)
 
+stargazer(train[c("Nper", "Ingtotugarr", "total_female", "num_ocu", "menores", "Ingtot_jh", "max_educ_jh", "num_afsalud" )], type = "text")
 
 ###################
 ##Predecir pobreza
