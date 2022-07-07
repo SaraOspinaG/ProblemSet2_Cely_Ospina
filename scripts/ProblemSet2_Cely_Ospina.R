@@ -5,6 +5,9 @@
 ###################################
 
 
+#Motivation: targeted questions that rapidly and cheaply measure the effectiveness orf new policies and interventions
+#Predictions: household level only 
+
 #####################
 # 1. Data Acquisition
 #####################
@@ -18,7 +21,7 @@ p_load(tidyverse,    #Para limpiar los datos
        caret,        #Para la clasificación y regresiones
        rio,          #Para importar datos
        modelsummary, # msummary
-       gamlr,        # cv.gamlr >la que nos permite hacer lasso
+       gamlr,        # cv.gamlr >la que nos permite hacer lasso #NOTA ESTO ES LO QUE HAY QUE TENER CUIDADO, CARET Y GAMLR TIENEN FUNCIONES CON EL MISMO NOMBRE Y DISTINTO RESULTADO, REVISAR
        class,
        ggplot2,
        skimr,
@@ -30,10 +33,14 @@ p_load(tidyverse,    #Para limpiar los datos
 ##cargar los datos
 
 ##Establecer el directorio
-setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
-#setwd(aqui pon el tuuyo)
 
-##Aquí no estoy segura si las bases antes de trabajarlas van en la carpeta de stores o en una carpeta de Data
+#setwd
+setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
+setwd("C:/Users/Camila Cely/Documents/GitHub/ProblemSet2_Cely_Ospina")
+
+
+
+##Aquí no estoy segura si las bases antes de trabajarlas van en la carpeta de stores o en una carpeta de Data #yo creo que van en stores
 ##traer las bases de train y de test
 train_hogares<-readRDS("stores/train_hogares.Rds")
 train_personas<-readRDS("stores/train_personas.Rds")
@@ -47,12 +54,12 @@ test_personas<-readRDS("stores/test_personas.Rds")
 
 
 #De la base de hogares: (revisar que estén en train y test)
-#Ingtot (ingreso total ) (no está en TEST entonces no se) <<<<<<<esta es la Y para el ejecricio de predicción del ingreso,creo
+#Ingtot (ingreso total ) (no está en TEST entonces no se #ESTO LO RESUELVE IGNACIO EN SLACK, LA IDEA ES PREDECIRLA PARA TEST) <<<<<<<esta es la Y para el ejecricio de predicción del ingreso,creo
 #Nper (personas en el hogar)(esta no estoy segura)
-#Clase (si está en cabecera o no, no se si aquí tambien podemos correr efectos fijos o algo así)
+#Clase (si está en cabecera o no, no se si aquí tambien podemos correr efectos fijos o algo así) #ME GUSTA
 #Dominio (cual cabecera)
-#P5090 (Si la vivienda ocupada es propia u otro)
-#Pobre (1 es pobre) Esta variable esta en la de train, no en la de test <<<<<<<esta es la Y para el ejecricio de pobreza,creo
+#P5090 (Si la vivienda ocupada es propia u otro) 
+#Pobre (1 es pobre) Esta variable esta en la de train, no en la de test <<<<<<<esta es la Y para el ejecricio de pobreza,creo #TAL CUAL
 
 #De la base personas: no se si aquí se sacarían promedios o sumas para unirla con la de hogares (revisar que estén en train y test)
 #Estrato1 (estrato socioeconómico)
@@ -65,7 +72,7 @@ test_personas<-readRDS("stores/test_personas.Rds")
 #P6210 (max nivel educativo)
 
 ##Aquí no se si deberiamos quitar variables que no vamos a usar, eso me quedo de duda del pasado, algo como un drop en stata
-
+##CREO QUE NO SE HACE DROP, SINO SE SACA UNA SUB-BASE CON LAS VARIABLES QUE QUEREMOS
 
 ##Transformamos las variables categóricas que vamos a usar para que sean de tipo factor (esto puede variar con las variables que escojamos)
 
@@ -77,6 +84,27 @@ train_personas <- train_personas %>%
 
 
 ##Revisar NA por variables y quitar las que no sean necesarias
+
+#train_hogares
+is.na(train_hogares)
+colSums(is.na(train_hogares))
+colSums(is.na(train_hogares))>0
+colnames(train_hogares)[colSums(is.na(train_hogares))>0] #las variables con missings son P5100 , P5130 y P5140
+#esas tres variables con missing estan relacionadas con precio de arriendo
+#pero yo creo que eso no es necesariamente importante, sino el hecho de si pagan arriendo o no
+
+#train_personas
+is.na(train_personas)
+colSums(is.na(train_personas))
+colSums(is.na(train_personas))>0
+colnames(train_personas)[colSums(is.na(train_personas))>0] #en esta hay muchas mas variables con missings
+#de manera importante encontramos P6090 con missings (beneficiario salud) y P6210 (max nivel educativo)
+#de esas me parece importante que trabajemos por lo menos la de max nivel educativo
+
+is.na(train_personas$P6210) 
+sum(is.na(train_personas$P6210)) #no hay missing values
+#de hecho hay 22685 missings!!!
+
 
 #calclular la cantidad de na por cada variable, creo que si son mas de x porcentaje se quita la variable 
 
