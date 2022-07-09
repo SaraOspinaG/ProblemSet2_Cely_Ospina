@@ -28,8 +28,9 @@ p_load(tidyverse,    #Para limpiar los datos
        rvest,
        dplyr,
        stargazer,
-       gtsummary) 
+       gtsummary) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
 
+predict<- stats::predict  #con esto soluciono el problema de que haya mas de una libreria con este comando
 
 ##model y alternate cutoffs
 
@@ -347,13 +348,13 @@ tablep4
 #    P6040             Oc                           P6210                  mujer       
 #Min.   : 11.0   Min.   :0.0000   Ninguno                    : 8603   Min.   :0.0000  
 #1st Qu.: 37.0   1st Qu.:0.0000   Preescolar                 :   13   1st Qu.:0.0000  
-#Median : 49.0   Median :1.0000   Básica primaria (1o - 5o)  :46619   Median :0.0000  
-#Mean   : 49.6   Mean   :0.7107   Básica secundaria (6o - 9o):21616   Mean   :0.4164  
+#Median : 49.0   Median :1.0000   B?sica primaria (1o - 5o)  :46619   Median :0.0000  
+#Mean   : 49.6   Mean   :0.7107   B?sica secundaria (6o - 9o):21616   Mean   :0.4164  
 #3rd Qu.: 61.0   3rd Qu.:1.0000   Media (10o - 13o)          :43028   3rd Qu.:1.0000  
 #Max.   :108.0   Max.   :1.0000   Superior o universitaria   :45061   Max.   :1.0000  
 #No sabe, no informa        :   20                   
 
-#VEMOS= el promedio de edad de jefes de hogar es 49 años, 71% estan empleados, 41% son mujeres
+#VEMOS= el promedio de edad de jefes de hogar es 49 a?os, 71% estan empleados, 41% son mujeres
 #otra cosa= vemos que hay outliers en edad, aun mas teniendo en cuenta que en esta base tenemos solo jefe de hogar
 
 boxplot(train_personas_f$P6040,
@@ -364,7 +365,7 @@ lower_bound_j <- quantile(train_personas_f$P6040, 0.01)
 lower_bound_j #20
 
 upper_bound_j <- quantile(train_personas_f$P6040, 0.99) 
-upper_bound_j #87 #de esta manera sacamos esos valores locos de mas de 100 años
+upper_bound_j #87 #de esta manera sacamos esos valores locos de mas de 100 a?os
 
 train_personas_f <- train_personas_f %>% subset(P6040 >= lower_bound_j) #orig=164960, quedan 163738
 #quitando los menores a lower_bound_j nos elimina 1222 observaciones
