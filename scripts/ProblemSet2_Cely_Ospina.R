@@ -43,8 +43,6 @@ setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely
 setwd("C:/Users/Camila Cely/Documents/GitHub/ProblemSet2_Cely_Ospina")
 
 
-
-##Aquí no estoy segura si las bases antes de trabajarlas van en la carpeta de stores o en una carpeta de Data #yo creo que van en stores
 ##traer las bases de train y de test
 train_hogares<-readRDS("stores/train_hogares.Rds")
 train_personas<-readRDS("stores/train_personas.Rds")
@@ -71,7 +69,7 @@ intersect(names(test_hogares), names(train_hogares))
 #Nper - personas en el hogar********************************************************
 #Npersug - personas en la unidad de gasto (??)
 #Li - linea de indigencia
-#Lp - linea de pobreza
+#Lp - linea de pobreza (creo que esta la vamos a necesitar para la predicción del ingreso)*********************** 
 #Fex_c - factor de expansion anualizado
 #Fex_dpto - factor expansion departamental 
 
@@ -104,6 +102,7 @@ var_lab(test_hogares$P5100) = "Cuota de amortizacion mensual"
 var_lab(test_hogares$P5130) = "Valor estimado de arriendo mensual"
 var_lab(test_hogares$P5140) =  "Valor de arriendo mensual"
 var_lab(test_hogares$Nper) = "Num de personas en el hogar"
+var_lab(test_hogares$Lp) = "Linea de pobreza del hogar"
 
 
 #Summary para ver estad descr
@@ -111,20 +110,21 @@ var_lab(test_hogares$Nper) = "Num de personas en el hogar"
 install.packages("gtsummary")
 library(gtsummary)
 
-train_h2 <- select(filter(train_hogares),c(Dominio, P5090, P5100, P5130, P5140, Nper)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
+train_h2 <- select(filter(train_hogares),c(Dominio, P5090, P5100, P5130, P5140, Nper, Lp)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
 
 # summarize the data with our package
 table1 <- summary(train_h2)  #lo queria hacer con gtsummary pero no me ha podido instalar bien, sale lo mismo pero mas feo
 table1
 
-#Dominio              P5090           P5100               P5130               P5140                Nper       
-#Length:164960      Min.   :1.000   Min.   :       98   Min.   :       98   Min.   :       20   Min.   : 1.000  
-#Class :character   1st Qu.:1.000   1st Qu.:   300000   1st Qu.:   200000   1st Qu.:   250000   1st Qu.: 2.000  
-#Mode  :character   Median :3.000   Median :   500000   Median :   350000   Median :   380000   Median : 3.000  
-#                   Mean   :2.461   Mean   :   889276   Mean   :   507928   Mean   :   439160   Mean   : 3.295  
-#                   3rd Qu.:3.000   3rd Qu.:   900000   3rd Qu.:   500000   3rd Qu.:   500000   3rd Qu.: 4.000  
-#                   Max.   :6.000   Max.   :280000000   Max.   :800000000   Max.   :300000000   Max.   :28.000  
-#                                   NA's   :159344      NA's   :64344       NA's   :100616                      
+
+#   Dominio              P5090           P5100               P5130               P5140                Nper              Lp        
+#Length:164960      Min.   :1.000   Min.   :       98   Min.   :       98   Min.   :       20   Min.   : 1.000   Min.   :167222  
+#Class :character   1st Qu.:1.000   1st Qu.:   300000   1st Qu.:   200000   1st Qu.:   250000   1st Qu.: 2.000   1st Qu.:275594  
+#Mode  :character   Median :3.000   Median :   500000   Median :   350000   Median :   380000   Median : 3.000   Median :280029  
+#                   Mean   :2.461   Mean   :   889276   Mean   :   507928   Mean   :   439160   Mean   : 3.295   Mean   :271605  
+#                   3rd Qu.:3.000   3rd Qu.:   900000   3rd Qu.:   500000   3rd Qu.:   500000   3rd Qu.: 4.000   3rd Qu.:285650  
+#                   Max.   :6.000   Max.   :280000000   Max.   :800000000   Max.   :300000000   Max.   :28.000   Max.   :303817  
+#                                   NA's   :159344      NA's   :64344       NA's   :100616                                       
 
 #Primero hay que volver Dominio as factor (la voy a poner en hogares y en personas de una vez)
 train_hogares$Dominio <- as.factor(train_hogares$Dominio)       
@@ -250,6 +250,7 @@ boxplot(train_hogares_f$valor_arriendo, #NUEVA
 
 
 
+
   
   
 
@@ -272,6 +273,8 @@ var_lab(train_personas$P6040) = "Edad"
 var_lab(train_personas$Pet) = "Poblacion en edad de trabajar"
 var_lab(train_personas$Oc) = "Ocupado"
 var_lab(train_personas$P6210) = "Maximo nivel educativo"
+var_lab(train_personas$Estrato1) = "Estrato"
+var_lab(train_personas$P6090) = "Afiliado al sistema de salud"
 
 var_lab(test_personas$P6020) = "Sexo"
 var_lab(test_personas$P6050) = "Parentesco Jefe de hogar"
@@ -279,9 +282,12 @@ var_lab(test_personas$P6040) = "Edad"
 var_lab(test_personas$Pet) = "Poblacion en edad de trabajar"
 var_lab(test_personas$Oc) = "Ocupado"
 var_lab(test_personas$P6210) = "Maximo nivel educativo"
+var_lab(test_personas$Estrato1) = "Estrato"
+var_lab(test_personas$P6090) = "Afiliado al sistema de salud"
+
 
 #Ahora analizar el comportamiento de esas variables
-train_p <- select(filter(train_personas),c(Dominio, P6020, P6050, P6040, Pet, Oc, P6210)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
+train_p <- select(filter(train_personas),c(Dominio, P6020, P6050, P6040, Pet, Oc, P6210, Estrato1, P6090)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
 tablep1 <- summary(train_p) 
 tablep1
 #Vemos que en Pet, Oc y nivel educativo hay muchos missings
@@ -290,6 +296,12 @@ tablep1
 #analicemos jefes de hogar###########
 
 summary(train_personas$P6050)
+
+#Ajustamos el comportamiento de afiliado para que no sabe, no responda sea 0
+train_personas <- train_personas %>% 
+  mutate(P6090 = if_else(train_personas$P6090==1, 1, 0))
+summary(train_personas$P6090) #93% de los encuestados están ailiados al sistema de salud, es probable que personas pobres estén afiliadas
+
 
 #voy a crear una variable de solo jefe de hogar
 train_personas <- train_personas %>% 
@@ -301,7 +313,7 @@ train_personas_f<- train_personas
 
 train_personas_f <- train_personas_f %>% subset(jefe_hogar == 1) #aqui saque base con solo jefes de hogar
 
-train_p2 <- select(filter(train_personas_f),c(Dominio, P6020, P6050, P6040, Pet, Oc, P6210)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
+train_p2 <- select(filter(train_personas_f),c(Dominio, P6020, P6050, P6040, Pet, Oc, P6210, Estrato1, P6090)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
 tablep2 <- summary(train_p2) 
 tablep2
 #vemos que mejora la situacion de los missings, ya no hay missings en nivel educativo, hay 1 solo missing en Pet
@@ -335,6 +347,7 @@ train_personas_f <- train_personas_f %>%
   mutate(mujer = if_else(train_personas_f$P6020==2, 1, 0))
 
 #educacion es factor
+sum(is.na(train_personas_f$P6210)) #no hay missing values en educ
 train_personas_f$P6210 <- as.factor(train_personas_f$P6210)       
 class(train_personas_f$P6210)
 
@@ -375,20 +388,29 @@ train_personas_f <- train_personas_f %>% subset(P6040 <= upper_bound_j) #quedan 
 #en total eliminamos 2679 obs (1,62%)
 #SOLUCIONADOS LOS OUTLIERS DE EDAD
 
+
+
 ########VOY ACA, QUIERO UNIR LO DE PERSONAS CON LO DE HOGARES PERO AUN NO SE BIEN COMO
 
 
-#quiero unir lo de personas con lo de hogares
+#quiero unir lo de personas con lo de hogares, como solo lo vamos a unir con los jefes de hogar entonces no necesitamos los sum
 
-DB<-train_personas_f %>% group_by(id) %>% summarise(femhog = sum(fem),
-                                                  ocuhog = sum(ocu),
-                                                  menoreshog= sum(menores),
-                                                  Ingtothog = sum(Ingtot),
-                                                  afiliadoshog = sum(afiliado),
-                                                  estratohog=mean(estrato),
-                                                  maxeduchog= sum(maxeduc)
+DB<-train_personas_f %>% group_by(id) %>% summarise(jfmujer = mujer,        #Jefe del hogar es mujer
+                                                    jfocu = Oc,             #Jefe del hogar esta ocupado
+                                                    jfestrato=Estrato1,     #Estrato de jefe del hogar
+                                                    jfeduc= P6210,          #educación máxima de jefe del hogar
+                                                    jfedad= P6040           #Edad de jefe del hogar
 ) 
 
+
+##Incluímos las variables que consideramos importantes de la base de personas a la de hogares
+train_hogares_f <-train_hogares_f %>% left_join(DB,by="id")
+
+
+
+
+#2. Estadistica descriptiva
+###############################
 
 
 
