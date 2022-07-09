@@ -250,10 +250,6 @@ boxplot(train_hogares_f$valor_arriendo, #NUEVA
 
 
 
-
-  
-  
-
 #cuales son las variables que aparecen tanto en train como en test
 ################personas
 
@@ -399,7 +395,8 @@ DB<-train_personas_f %>% group_by(id) %>% summarise(jfmujer = mujer,        #Jef
                                                     jfocu = Oc,             #Jefe del hogar esta ocupado
                                                     jfestrato=Estrato1,     #Estrato de jefe del hogar
                                                     jfeduc= P6210,          #educación máxima de jefe del hogar
-                                                    jfedad= P6040           #Edad de jefe del hogar
+                                                    jfedad= P6040,           #Edad de jefe del hogar
+                                                    jfafilidado= P6090
 ) 
 
 
