@@ -28,11 +28,12 @@ p_load(tidyverse,    #Para limpiar los datos
        rvest,
        dplyr,
        stargazer,
-       gtsummary) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
+       gtsummary,
+       expss) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
 
 predict<- stats::predict  #con esto soluciono el problema de que haya mas de una libreria con este comando
 
-##model y alternate cutoffs
+
 
 ##cargar los datos
 
@@ -80,8 +81,6 @@ intersect(names(test_hogares), names(train_hogares))
 #por ahora el analisis lo voy a hacer en train porque esa es la base que trabajaremos, entiendo, y en test solo se prueba
 
 #aqui le voy a poner label a las variables
-install.packages("expss")
-library(expss)
 
 var_lab(train_hogares$P5090) = "Tipo de ocupacion de la vivienda"
 val_lab(train_hogares$P5090) = num_lab("
@@ -107,15 +106,13 @@ var_lab(test_hogares$Lp) = "Linea de pobreza del hogar"
 
 #Summary para ver estad descr
 
-install.packages("gtsummary")
-library(gtsummary)
-
 train_h2 <- select(filter(train_hogares),c(Dominio, P5090, P5100, P5130, P5140, Nper, Lp)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
 
 # summarize the data with our package
 table1 <- summary(train_h2)  #lo queria hacer con gtsummary pero no me ha podido instalar bien, sale lo mismo pero mas feo
 table1
 
+#revisar el paquete para cuando vayamos a exportar para poner en el pdf
 
 #   Dominio              P5090           P5100               P5130               P5140                Nper              Lp        
 #Length:164960      Min.   :1.000   Min.   :       98   Min.   :       98   Min.   :       20   Min.   : 1.000   Min.   :167222  
@@ -172,6 +169,19 @@ sum(train_hogares$P5090 == '3')
 #4 = arriendo estimado
 #5 = arriendo estimado
 #6 = arriendo estimado
+
+       
+class(train_hogares$P5140)
+class(train_hogares$P5090)
+class(train_hogares$P5130) #nos estan saliendo estas tres variables como "labelled" "numeric" 
+
+train_hogares$P5140 <- as.numeric(train_hogares$P5140)
+train_hogares$P5090 <- as.numeric(train_hogares$P5090)
+train_hogares$P5130 <- as.numeric(train_hogares$P5130) #aqui ya quedan numeric
+
+test_hogares$P5140 <- as.numeric(test_hogares$P5140)
+test_hogares$P5090 <- as.numeric(test_hogares$P5090)
+test_hogares$P5130 <- as.numeric(test_hogares$P5130)#hago lo mismo pero en test
 
 train_hogares <- train_hogares %>% 
   mutate(valor_arriendo = if_else(train_hogares$P5090==3, train_hogares$P5140, train_hogares$P5130))
@@ -237,14 +247,28 @@ table3
 #### YA QUEDO MEJOR VALOR_ARRIENDO
 
 
+#entonces ahora hay que hacer exactamente lo mismo en test (logica= en la vida real primero hariamos esta limpieza y luego dividiriamos la base en train y test)
+lower_boundtest <- quantile(test_hogares$valor_arriendo, 0.07) #los valores inferiores son malos registros, ejemplo, arriendo de 99 pesos
+lower_boundtest
+
+####SARA HABLEMOS DE ESTE UPPER BOUND
+upper_boundtest <- quantile(test_hogares$valor_arriendo, 0.998) #este valor lo escogi revisando el boxplot original pero esta sujeto a cambios, ver con sara
+upper_boundtest #dan valores ligeramente diferentes a los de train precisamente porque no son los mismos datos
+
+#duplico base
+test_hogares_f<- test_hogares
+
+test_hogares_f <- test_hogares_f %>% subset(valor_arriendo >= lower_boundtest) #61649
+test_hogares_f <- test_hogares_f %>% subset(valor_arriendo <= upper_boundtest) #61520 
+
 #COMPARAMOS BOXPLOTS PARA VER DISTRIBUCION DE VALOR_ARRIENDO ENTRE LA ORIGINAL Y LA NUEVA BASE
 
-boxplot(train_hogares$valor_arriendo, #ORIGINAL
+boxplot(test_hogares$valor_arriendo, #ORIGINAL
         ylab = "valor arriendo"
 )
 
 
-boxplot(train_hogares_f$valor_arriendo, #NUEVA
+boxplot(test_hogares_f$valor_arriendo, #NUEVA
         ylab = "valor arriendo"
 )
 
@@ -253,7 +277,9 @@ boxplot(train_hogares_f$valor_arriendo, #NUEVA
 #cuales son las variables que aparecen tanto en train como en test
 ################personas
 
-intersect(names(test_personas), names(train_personas)) #aqui salen muchas mas
+intersect(names(test_personas), names(train_personas)) #aqui salen muchas mas 
+#ESTAS SON LAS QUE DEBERIAMOS METER AL ARBOL
+
 
 #############Posibles variables relevantes
 #P6020 (sexo) #creo que habria que relacionarla con jefe de hogar femenina (buscar literatura)
@@ -308,6 +334,7 @@ summary(train_personas$jefe_hogar) #30% de los encuestados son jefes de hogar
 train_personas_f<- train_personas
 
 train_personas_f <- train_personas_f %>% subset(jefe_hogar == 1) #aqui saque base con solo jefes de hogar
+
 
 train_p2 <- select(filter(train_personas_f),c(Dominio, P6020, P6050, P6040, Pet, Oc, P6210, Estrato1, P6090)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
 tablep2 <- summary(train_p2) 
@@ -384,6 +411,19 @@ train_personas_f <- train_personas_f %>% subset(P6040 <= upper_bound_j) #quedan 
 #en total eliminamos 2679 obs (1,62%)
 #SOLUCIONADOS LOS OUTLIERS DE EDAD
 
+#Ahora voy a hacer exactamente lo mismo pero en test
+
+test_personas <- test_personas %>% 
+  mutate(P6090 = if_else(test_personas$P6090==1, 1, 0)) #salud
+
+test_personas <- test_personas %>% 
+  mutate(jefe_hogar = if_else(test_personas$P6050==1, 1, 0)) #jefe hogar
+
+train_personas_f<- train_personas
+
+train_personas_f <- train_personas_f %>% subset(jefe_hogar == 1) #aqui saque base con solo jefes de hogar
+
+
 
 
 ########VOY ACA, QUIERO UNIR LO DE PERSONAS CON LO DE HOGARES PERO AUN NO SE BIEN COMO
@@ -395,6 +435,7 @@ DB <- select(filter(train_personas_f),c(id, mujer, Oc, Estrato1, P6210, P6040, P
 
 ##Incluímos las variables que consideramos importantes de la base de personas a la de hogares
 train_hogares_total <-train_hogares_f %>% left_join(DB,by="id")
+
 
 
 
