@@ -292,14 +292,6 @@ boxplot(test_hogares_f$valor_arriendo, #NUEVA
 intersect(names(test_personas), names(train_personas)) #aqui salen muchas mas 
 
 
-#############Posibles variables relevantes
-#P6020 (sexo) #creo que habria que relacionarla con jefe de hogar femenina (buscar literatura)
-#P6050 (parentesco con jefe de hogar; jefe de hogar = 1) 
-#P6040 (edad) #aqui tambien creo que estaria bien ver la edad del jefe de hogar #y ver la edad promedio del hogar
-#Pet (poblacion en edad de trabajar)
-#Oc (Ocupado) #ver si el jefe de hogar esta ocupado?
-#P6210 (max nivel educativo) # importa es en el de jefe de hogar!
-
 var_lab(train_personas$P6020) = "Sexo"
 var_lab(train_personas$P6050) = "Parentesco Jefe de hogar"
 var_lab(train_personas$P6040) = "Edad"
@@ -307,6 +299,8 @@ var_lab(train_personas$Pet) = "Poblacion en edad de trabajar"
 var_lab(train_personas$Oc) = "Ocupado"
 var_lab(train_personas$P6210) = "Maximo nivel educativo"
 var_lab(train_personas$P6090) = "Afiliado al sistema de salud"
+var_lab(train_personas$P7510s3) = "Recibio dinero del gobierno"
+var_lab(train_personas$P7510s5) = "Recibio dinero de productos financieros"
 
 var_lab(test_personas$P6020) = "Sexo"
 var_lab(test_personas$P6050) = "Parentesco Jefe de hogar"
@@ -315,7 +309,8 @@ var_lab(test_personas$Pet) = "Poblacion en edad de trabajar"
 var_lab(test_personas$Oc) = "Ocupado"
 var_lab(test_personas$P6210) = "Maximo nivel educativo"
 var_lab(test_personas$P6090) = "Afiliado al sistema de salud"
-
+var_lab(test_personas$P7510s3) = "Recibio dinero del gobierno"
+var_lab(test_personas$P7510s5) = "Recibio dinero de productos financieros"
 
 #Ahora analizar el comportamiento de esas variables
 train_p <- select(filter(train_personas),c(Dominio, P6020, P6050, P6040, Pet, Oc, P6210, P6090)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
