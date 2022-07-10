@@ -573,8 +573,70 @@ colnames(test_final)[colSums(is.na(test_final))>0] #nuevamente solo nos quedan N
 #2. Estadistica descriptiva general
 ###############################
 
+#querremos mostrar las variables que nos interesan en TRAIN
+#como ya no tenemos hogares y personas por separado, sacamos este analisis en las bases final
 
 
+colnames(train_final)
+
+#[1] "id"             "Clase"          "Dominio"        "P5000"          "P5010"          "P5090"         
+#[7] "P5100"          "P5130"          "P5140"          "Nper"           "Npersug"        "Ingtotug"      
+#[13] "Ingtotugarr"    "Ingpcug"        "Li"             "Lp"             "Pobre"          "Indigente"     
+#[19] "Npobres"        "Nindigentes"    "Fex_c"          "Depto"          "Fex_dpto"       "valor_arriendo"
+#[25] "mujer"          "Oc"             "P6210"          "P6040"          "P6090"          "P7510s3"       
+#[31] "P7510s5"     
+
+
+var_lab(train_final$P5000) = "Num total de cuartos"
+var_lab(train_final$P5010) = "Num total de cuartos donde se duerme"
+var_lab(train_final$Npersug) = "Num personas por unidad de gasto"
+var_lab(train_final$Ingtotug) = "Ingreso total unidad de gasto"
+var_lab(train_final$Ingtotugarr) = "Ingreso total unidad de gasto con imputacion de arriendo"
+var_lab(train_final$Ingtpcug) = "Ingreso per capita unidad de gasto con imputacion de arriendo"
+var_lab(train_final$Li) = "Linea indigencia"
+var_lab(train_final$Li) = "Linea pobreza"
+var_lab(train_final$Pobre) = "Hogar clasificado como pobre (1)"
+var_lab(train_final$Npobres) = "Total pobres en el hogar"
+var_lab(train_final$Nindigentes) = "Total indigentes en el hogar"
+var_lab(train_final$Fex_c) = "Factor de expansion anualizado"
+var_lab(train_final$Fex_dpto) = "Factor de expansion departamental"
+var_lab(train_final$mujer) = "Jefe de hogar mujer (1)"
+var_lab(train_final$P6210) = "Nivel educativo max jefe de hogar"
+var_lab(train_final$P6040) = "Edad jefe de hogar"
+var_lab(train_final$P6090) = "Entidad salud jefe de hogar (1=si)"
+var_lab(train_final$P7510s3) = "Jefe de hogar recibe ayudas institucionales"
+var_lab(train_final$P7510s5) = "Jefe de hogar recibe dinero de productos financieros"
+
+dim(train_final) #151982     31
+
+#paquete gtsummary
+#The default output from tbl_summary() is meant to be publication ready.
+
+summary(train_final$Pobre) #mean= 0.1923
+class(train_final$Pobre) #19% de las observaciones de hogares denotan que son pobres, pero R no lo lee porque es labelled numeric y no le he podido cambiar la clase
+
+#voy a intentar crear una nueva variable con los mismos valores
+
+train_final <- train_final %>% 
+  mutate(hogarpobre = if_else(train_final$Pobre==1, 1, 0))
+
+class(train_final$hogarpobre) #esta ya queda solo como numeric
+var_lab(train_final$hogarpobre) = "Hogar clasificado como pobre (1)" #ahora si se pudo
+
+#tabla general
+train_final %>%
+  select(hogarpobre, mujer, P6210, P6040, valor_arriendo, Ingtotugarr) %>%
+  tbl_summary() 
+
+#tabla discriminando si el jefe de hogar es hombre o mujer
+train_final %>%
+  select(hogarpobre, mujer, P6210, P6040, valor_arriendo, Ingtotugarr) %>%
+  tbl_summary(by=mujer) 
+
+summary(train_final$valor_arriendo)
+hist(train_final$valor_arriendo)
+
+#aqui se le pueden añadir mas tablas si quisieramos pero creo que debido a que el documento es tan acotado, podemos por ahora dejar con estas basicas
 
 
 
