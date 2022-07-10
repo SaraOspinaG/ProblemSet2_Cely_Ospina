@@ -39,8 +39,8 @@ predict<- stats::predict  #con esto soluciono el problema de que haya mas de una
 
 ##Establecer el directorio
 #setwd
-#setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
-setwd("C:/Users/Camila Cely/Documents/GitHub/ProblemSet2_Cely_Ospina")
+setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
+#setwd("C:/Users/Camila Cely/Documents/GitHub/ProblemSet2_Cely_Ospina")
 
 ##traer las bases de train y de test
 train_hogares<-readRDS("stores/train_hogares.Rds")
@@ -636,6 +636,8 @@ train_final %>%
 summary(train_final$valor_arriendo)
 hist(train_final$valor_arriendo)
 
+
+
 #aqui se le pueden añadir mas tablas si quisieramos pero creo que debido a que el documento es tan acotado, podemos por ahora dejar con estas basicas
 
 ##
@@ -717,6 +719,10 @@ hist(test_final$valor_arriendo) #dan parecidos
 
 #aqui se le pueden añadir mas tablas si quisieramos pero creo que debido a que el documento es tan acotado, podemos por ahora dejar con estas basicas
 
+#####Tener Pobre como factor para que los modelos que corra con caret funcionen
+train_final <- train_final %>% mutate(hogar_es_pobre= train_final$hogarpobre)
+train_final <- train_final %>% mutate(hogar_es_pobre=factor(hogar_es_pobre, levels=c(1,0), labels=c("Si", "No")))
+
 
 #3. Dividir
 ##Primero partimos la base de entrenamiento, se parte en 80% - 20% por ser la forma en la que se comporta la variable de pobreza 
@@ -790,25 +796,30 @@ adaboost <- train_final(
 
 
 
-#Logit Simple
+#######Logit Simple######
+
+
+
+summary(training)
+help(trainControl)
 
 ctrl_def<- trainControl(method = "cv", 
                         number = 5,
-                        summaryFunction = defaultSummary,   #Si fuera para una regresion seria MSE o RMSE
+                        summaryFunction = defaultSummary,  
                         classProbs = TRUE,
                         verbose = FALSE,
                         savePredictions = T)
 
 set.seed(123)
-mylogit_caret_deg <- train (
-  Default~amount+installment+age+history.....,     #poner aqui el modelo que mejor corrió con los árboles
+mylogit_caret_def <- train(
+  hogar_es_pobre ~ valor_arriendo+mujer+factor(mujer) +factor (P6210) + P6040 + valor_arriendo, 
   data = training,
   method = "glm",
   trControl = ctrl_def,
   family = "binomial",
   preProcess = c("center", "scale")
 )
-
+mylogit_caret_def
 
 #Revisar si se hace con el twoClassSummary y el FiveStats
 
