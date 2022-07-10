@@ -494,106 +494,30 @@ test_final$P7510s5[is.na(test_final$P7510s5)] <- 0
 
 summary(test_final) 
 
-
-##Primero partimos la base de entrenamiento, se parte en 80% - 20% por ser la forma en la que se comporta la variable de pobreza 
-set.seed(123)
-split1<-createDataPartition(train_final$Pobre = .8)[[1]]
-length(split1)
-
-other<-train_final[-split1]
-training <-train_final[split1]
-
-##Ahora partimos para obtener las bases de evaluacion y prueba
-split2<- createDataPartition(other$Pobre, p=1/3) [[1]]
-evaluation<-other[split2]
-testing<-other[-split2]
-
-
-
-
 #2. Estadistica descriptiva
 ###############################
+#############################
 
 
 
 
-
-
-#cuales son las variables Y
-
-#Ingtot (ingreso total)
-#Pobre (1 es pobre) 
-
-##^recordar que ninguna de las 2 esta en test
-
-
-
-
-##Transformamos las variables categóricas que vamos a usar para que sean de tipo factor (esto puede variar con las variables que escojamos)
-
-train_hogares <- train_hogares %>%
-                 mutate_at(.vars = c("Clase","Dominio","P5090", "Pobre", "Indigente"), .funs = factor)
-
-train_personas <- train_personas %>%
-                  mutate_at(.vars = c("P6020", "P6090", "P6050", "P6210", "Pet", "Oc"), .funs = factor)
-
-
-
-
-
-##Volver dummies las variables categoricas >> aqui no entiendo si toca hacerlo para las dos bases 
-
-
-fem<-ifelse(train_personas$P6020==2,1,0)
-jefe<-ifelse(train_personas$P6050==1,1,0)
-ocu<-ifelse(is.na(train_personas$Oc)==1,1,0)
-edad<-train_personas$P6040
-Ingtot<- train_hogares$Ingtot
-menoreshogar<-ifelse(train$edad<18,1,0)
-afiliado<-ifelse(train_personas$P6090==2,1,0) #aqui falta que el 9 debería ser na creo
-#Estrato1: 1,2y3 son bajos según el DNP pero no se si necesariamente pobre (bajo y bajo-bajo son 1 y 2, 3 es medio-bajo)
-#maxeduc P6210
-#vivienda propia P9050
-#falta incluir la de educación y estrat, no estoy segura como incluir mas de una 
-
-
-#Se resumen las variables que se encuentran por persona para que estén en unidades compatibles con la de hogares
-DB<-train_personas %>% group_by(id) %>% summarise(femhog = sum(fem),
-                                        ocuhog = sum(ocu),
-                                        menoreshog= sum(menores),
-                                        Ingtothog = sum(Ingtot),
-                                        afiliadoshog = sum(afiliado),
-                                        estratohog=mean(estrato),
-                                        maxeduchog= sum(maxeduc)
-) 
-
-##se unen las bases para tener una sola de entrenamiento
-train_hogares <-train_hogares %>% left_join(DB,by="id")
-
-
-##Escalar variables (?)
-
-##Dividir la base en 3: Entrenamiento, evaluacion y prueba
-
+#3. Dividir
 ##Primero partimos la base de entrenamiento, se parte en 80% - 20% por ser la forma en la que se comporta la variable de pobreza 
 set.seed(123)
-split1<-createDataPartition(DB$Pobre = .8)[[1]]
+split1<-createDataPartition(train_final$Pobre, p = .8)[[1]]
 length(split1)
 
-other<-DB[-split1]
-training <-DB[split1]
+other<-train_final[-split1,]
+training <-train_final[split1,]
 
 ##Ahora partimos para obtener las bases de evaluacion y prueba
-split2<- createDataPartition(other$Pobre, p=1/3) [[1]]
-evaluation<-other[split2]
-testing<-other[-split2]
+split2<- createDataPartition(other$Pobre, p= 1/3) [[1]]
+evaluation<-other[split2,]
+testing<-other[-split2,]
 
 
-##Estadísticas descriptivas: (SE HACE ANTES O DESPUES DE DIVIDIR LA BASE EN 3?)
-
-skim(train_hogares)
-stargazer(train[c( )], type = "text")
-
+##4. Modelos de Clasificación
+#Pobre
 
 ###################
 ##Predecir pobreza
@@ -628,19 +552,12 @@ adaboost <- train(
 
 
 
+##5. Regresiones
+#Ingreso
 
 
 
-##modelos de ROC, AUC, False positives, False negatives 
-
-#A detailed explanation of the final chosen model. The explanation must include how the model was trained, hyper-parameters selection, and other relevant information.
-#∗ Include comparisons to at least 5 other models. You can compare them in terms of ROC, AUC, False Positives, or False Negatives.
-#∗ Describe the variables that you used in the model and a measure of their relative importance in the prediction.
-#∗ Describe any sub-sampling approach used to address class imbalances.
 
 
-##Income regression Models (este es predecir el ingreso)###################################
-#A detailed explanation of the final chosen model. The explanation must include how the model was trained, hyper-parameters selection, and other relevant information.
-#∗ Include comparisons to at least 5 other models. Compare them in terms of MSE.
-#∗ Convert the predicted income to a binary indicator and show the performance in terms of the ROC, AUC, False Positives, or False Negatives.
-#∗ Describe the variables that you used in the model and a measure of theirrelative importance in the prediction.
+
+
