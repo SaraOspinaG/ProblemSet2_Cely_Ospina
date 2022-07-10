@@ -647,14 +647,6 @@ train_final <- train_final %>%
   mutate(hogar_pobre_pr = if_else(train_final$Ingtotugarr<=(train_final$Lp * train_final$Nper), 1, 0))
 #notar que tocaba multiplicar linea de pobreza por numero de personas
 
-#hogarpobre     hogar_pobre_pr  
-#Min.   :0.0000   Min.   :0.0000  
-#1st Qu.:0.0000   1st Qu.:0.0000  
-#Median :0.0000   Median :0.0000  
-#Mean   :0.1923   Mean   :0.1928  
-#3rd Qu.:0.0000   3rd Qu.:0.0000  
-#Max.   :1.0000   Max.   :1.0000  
-
 
 summary(train_final$hogarpobre)
 
@@ -662,8 +654,68 @@ compare<- select(filter(train_final),c(hogarpobre, hogar_pobre_pr))
 table_compare <- summary(compare)  
 table_compare 
 
+#hogarpobre     hogar_pobre_pr  
+#Min.   :0.0000   Min.   :0.0000  
+#1st Qu.:0.0000   1st Qu.:0.0000  
+#Median :0.0000   Median :0.0000  
+#Mean   :0.1923   Mean   :0.1928 #ahora sí nos da
+#3rd Qu.:0.0000   3rd Qu.:0.0000  
+#Max.   :1.0000   Max.   :1.0000  
 
+### ####### ####### #######
+#por ultimo voy a hacer exactamente lo mismo pero en test_final
+###### ######## ####### ######
 
+colnames(test_final)
+# "id"             "Clase"          "Dominio"        "P5000"          "P5010"          "P5090"         
+#[7] "P5100"          "P5130"          "P5140"          "Nper"           "Npersug"        "Li"            
+#[13] "Lp"             "Fex_c"          "Depto"          "Fex_dpto"       "valor_arriendo" "mujer"         
+#[19] "Oc"             "P6210"          "P6040"          "P6090"          "P7510s3"        "P7510s5" 
+
+##NOTAR que en test no esta la variable de Ingtotugarr, entonces hay que aprender a predecirla con lo que tenemos
+    
+var_lab(test_final$P5000) = "Num total de cuartos"
+var_lab(test_final$P5010) = "Num total de cuartos donde se duerme"
+var_lab(test_final$Npersug) = "Num personas por unidad de gasto"
+
+#var_lab(train_final$Ingtotug) = "Ingreso total unidad de gasto" #NO EXISTE
+#(train_final$Ingtotugarr) = "Ingreso total unidad de gasto con imputacion de arriendo" #NO EXISTE
+#var_lab(train_final$Ingtpcug) = "Ingreso per capita unidad de gasto con imputacion de arriendo" #NO EXISTE
+
+var_lab(test_final$Li) = "Linea indigencia"
+var_lab(test_final$Li) = "Linea pobreza"
+
+#var_lab(train_final$Pobre) = "Hogar clasificado como pobre (1)" #NO EXISTE
+#var_lab(train_final$Npobres) = "Total pobres en el hogar" #NO EXISTE
+#var_lab(train_final$Nindigentes) = "Total indigentes en el hogar"#NO EXISTE
+
+var_lab(test_final$Fex_c) = "Factor de expansion anualizado"
+var_lab(test_final$Fex_dpto) = "Factor de expansion departamental"
+var_lab(test_final$mujer) = "Jefe de hogar mujer (1)"
+var_lab(test_final$P6210) = "Nivel educativo max jefe de hogar"
+var_lab(test_final$P6040) = "Edad jefe de hogar"
+var_lab(test_final$P6090) = "Entidad salud jefe de hogar (1=si)"
+var_lab(test_final$P7510s3) = "Jefe de hogar recibe ayudas institucionales"
+var_lab(test_final$P7510s5) = "Jefe de hogar recibe dinero de productos financieros"
+
+dim(test_final) #60845    24
+
+#no hago el analisis de hogares pobres precisamente porque en esta base no los tenemos
+
+#tabla general
+test_final %>%
+  select(mujer, P6210, P6040, valor_arriendo) %>%
+  tbl_summary() 
+
+#tabla discriminando si el jefe de hogar es hombre o mujer
+test_final %>%
+  select(mujer, P6210, P6040, valor_arriendo) %>%
+  tbl_summary(by=mujer) #las proporciones de todo estan dando parecidas, excepto valor arriendo, que en esta muestra mas pequeña esta dando mas caro para las mujeres (40.000 pesos mas caro en promedio, alrededor de 11% mas caro)
+
+summary(test_final$valor_arriendo)
+hist(test_final$valor_arriendo) #dan parecidos
+
+#aqui se le pueden añadir mas tablas si quisieramos pero creo que debido a que el documento es tan acotado, podemos por ahora dejar con estas basicas
 
 
 #3. Dividir
@@ -680,6 +732,15 @@ split2<- createDataPartition(other$hogarpobre, p= 1/3) [[1]]
 evaluation<-other[split2,]
 testing<-other[-split2,]
 
+####NOTAR ENTONCES QUE AQUI TENEMOS LO SIGUIENTE:
+
+#TRAINING:    121586 obs
+#EVALUATION:   10132 obs
+#TESTING:      20264 obs  #recordar que en este testing SI HAY la variable de pobres
+
+#Por otro lado
+#TEST_FINAL:   60845 obs  #en esta es donde haremos la prueba final final no va mas
+
 
 ##4. Modelos de Clasificación
 #Pobre
@@ -690,9 +751,6 @@ testing<-other[-split2,]
 
 ##Classification Models: (este es pobre 1 o 0)#######################################
 
-
-
-
 #########################
 ###   AdaBoost   ########
 #########################
@@ -701,13 +759,14 @@ testing<-other[-split2,]
 
 #en clasificacion nuestra variable Y es si es pobre o no es pobre
 
-summary(train_hogares_f$Pobre) #19% pobres
+summary(train_final$hogarpobre) #19% pobres
 
 
 #le voy a lanzar un monton de variables a ver cuales pone como importantes
+
 set.seed(123)
-adaboost <- train(
-  Pobre ~amount+installment+age+ historygood + historypoor + purposeusedcar+ purposegoods.repair + purposeedu + foreigngerman + rentTR
+adaboost <- train_final(
+  hogarpobre ~amount+installment+age+ historygood + historypoor + purposeusedcar+ purposegoods.repair + purposeedu + foreigngerman + rentTR
   data = train_hogares_total, #aqui poner la base final
   method = "adaboost",
   trControl = ctrl,
@@ -715,6 +774,20 @@ adaboost <- train(
   metric = "Sens",
   #preProcess = c("center", "scale")
 )
+
+
+adaboost <- train_final(
+  hogarpobre ~amount+installment+age+ historygood + historypoor + purposeusedcar+ purposegoods.repair + purposeedu + foreigngerman + rentTR
+  data = train_hogares_total, #aqui poner la base final
+  method = "adaboost",
+  trControl = ctrl,
+  family = "binomial",
+  metric = "Sens",
+  #preProcess = c("center", "scale")
+)
+
+
+
 
 
 #Logit Simple
