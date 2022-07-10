@@ -442,6 +442,11 @@ summary(DB)
 train_hogares_total <-train_hogares_f %>% left_join(DB,by="id")
 ######base total ##########
 
+####Base de Hogares + Personas con todas las variables
+train_hogares_personas <- train_hogares_f %>% left_join(train_personas_f,by="id")
+summary(train_hogares_personas) 
+
+
 summary(train_hogares_total)
 summary(train_hogares_f)
 
