@@ -5,7 +5,7 @@
 ###################################
 
 
-#Motivation: targeted questions that rapidly and cheaply measure the effectiveness orf new policies and interventions
+#Motivation: targeted questions that rapidly and cheaply measure the effectiveness of new policies and interventions
 #Predictions: household level only 
 
 #####################
@@ -29,7 +29,8 @@ p_load(tidyverse,    #Para limpiar los datos
        dplyr,
        stargazer,
        gtsummary,
-       expss) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
+       expss,
+       fastAdaboost) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
 
 predict<- stats::predict  #con esto soluciono el problema de que haya mas de una libreria con este comando
 
@@ -38,9 +39,8 @@ predict<- stats::predict  #con esto soluciono el problema de que haya mas de una
 ##cargar los datos
 
 ##Establecer el directorio
-
 #setwd
-setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
+#setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
 setwd("C:/Users/Camila Cely/Documents/GitHub/ProblemSet2_Cely_Ospina")
 
 
@@ -105,7 +105,6 @@ var_lab(test_hogares$Lp) = "Linea de pobreza del hogar"
 
 
 #Summary para ver estad descr
-
 train_h2 <- select(filter(train_hogares),c(Dominio, P5090, P5100, P5130, P5140, Nper, Lp)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
 
 # summarize the data with our package
@@ -295,7 +294,6 @@ var_lab(train_personas$P6040) = "Edad"
 var_lab(train_personas$Pet) = "Poblacion en edad de trabajar"
 var_lab(train_personas$Oc) = "Ocupado"
 var_lab(train_personas$P6210) = "Maximo nivel educativo"
-var_lab(train_personas$Estrato1) = "Estrato"
 var_lab(train_personas$P6090) = "Afiliado al sistema de salud"
 
 var_lab(test_personas$P6020) = "Sexo"
@@ -304,12 +302,11 @@ var_lab(test_personas$P6040) = "Edad"
 var_lab(test_personas$Pet) = "Poblacion en edad de trabajar"
 var_lab(test_personas$Oc) = "Ocupado"
 var_lab(test_personas$P6210) = "Maximo nivel educativo"
-var_lab(test_personas$Estrato1) = "Estrato"
 var_lab(test_personas$P6090) = "Afiliado al sistema de salud"
 
 
 #Ahora analizar el comportamiento de esas variables
-train_p <- select(filter(train_personas),c(Dominio, P6020, P6050, P6040, Pet, Oc, P6210, Estrato1, P6090)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
+train_p <- select(filter(train_personas),c(Dominio, P6020, P6050, P6040, Pet, Oc, P6210, P6090)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
 tablep1 <- summary(train_p) 
 tablep1
 #Vemos que en Pet, Oc y nivel educativo hay muchos missings
@@ -336,7 +333,7 @@ train_personas_f<- train_personas
 train_personas_f <- train_personas_f %>% subset(jefe_hogar == 1) #aqui saque base con solo jefes de hogar
 
 
-train_p2 <- select(filter(train_personas_f),c(Dominio, P6020, P6050, P6040, Pet, Oc, P6210, Estrato1, P6090)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
+train_p2 <- select(filter(train_personas_f),c(Dominio, P6020, P6050, P6040, Pet, Oc, P6210, P6090)) #aqui estoy haciendo una sub-base con nuestras variables de interes para hacer las estad descr
 tablep2 <- summary(train_p2) 
 tablep2
 #vemos que mejora la situacion de los missings, ya no hay missings en nivel educativo, hay 1 solo missing en Pet
@@ -438,11 +435,22 @@ test_personas_f <- test_personas_f %>% subset(P6040 <= upper_bound_jtest)
 
 
 #quiero unir lo de personas con lo de hogares, como solo lo vamos a unir con los jefes de hogar entonces no necesitamos los sum
-DB <- select(filter(train_personas_f),c(id, mujer, Oc, Estrato1, P6210, P6040, P6090)) 
-
+DB <- select(filter(train_personas_f),c(id, mujer, Oc, P6210, P6040, P6090)) 
+summary(DB)
 
 ##Incluímos las variables que consideramos importantes de la base de personas a la de hogares
 train_hogares_total <-train_hogares_f %>% left_join(DB,by="id")
+######base total ##########
+
+summary(train_hogares_total)
+summary(train_hogares_f)
+
+train_hogares <- train_hogares %>%
+  mutate_at(.vars = c("Clase","Dominio","P5090", "Pobre", "Indigente"), .funs = factor)
+
+train_personas <- train_personas %>%
+  mutate_at(.vars = c("P6020", "P6090", "P6050", "P6210", "Pet", "Oc"), .funs = factor)
+
 
 
 
@@ -472,7 +480,7 @@ train_hogares <- train_hogares %>%
                  mutate_at(.vars = c("Clase","Dominio","P5090", "Pobre", "Indigente"), .funs = factor)
 
 train_personas <- train_personas %>%
-                  mutate_at(.vars = c("Estrato1", "P6020", "P6090", "P6050", "P6210", "Pet", "Oc"), .funs = factor)
+                  mutate_at(.vars = c("P6020", "P6090", "P6050", "P6210", "Pet", "Oc"), .funs = factor)
 
 
 
@@ -536,7 +544,37 @@ stargazer(train[c( )], type = "text")
 ##Predecir pobreza
 
 
-##Classification Models: (este es pobre 1 o 0)
+##Classification Models: (este es pobre 1 o 0)#######################################
+
+#########################
+###   AdaBoost   ########
+#########################
+
+#install.packages("fastAdaboost")
+
+#en clasificacion nuestra variable Y es si es pobre o no es pobre
+
+summary(train_hogares_f$Pobre) #19% pobres
+
+
+#le voy a lanzar un monton de variables a ver cuales pone como importantes
+set.seed(123)
+adaboost <- train(
+  Pobre ~amount+installment+age+ historygood + historypoor + purposeusedcar+ purposegoods.repair + purposeedu + foreigngerman + rentTR
+  data = train_hogares_total, #aqui poner la base final
+  method = "adaboost",
+  trControl = ctrl,
+  family = "binomial",
+  metric = "Sens",
+  #preProcess = c("center", "scale")
+)
+
+
+
+
+
+
+
 
 ##modelos de ROC, AUC, False positives, False negatives 
 
@@ -546,7 +584,7 @@ stargazer(train[c( )], type = "text")
 #∗ Describe any sub-sampling approach used to address class imbalances.
 
 
-##Income regression Models (este es predecir el ingreso)
+##Income regression Models (este es predecir el ingreso)###################################
 #A detailed explanation of the final chosen model. The explanation must include how the model was trained, hyper-parameters selection, and other relevant information.
 #∗ Include comparisons to at least 5 other models. Compare them in terms of MSE.
 #∗ Convert the predicted income to a binary indicator and show the performance in terms of the ROC, AUC, False Positives, or False Negatives.
