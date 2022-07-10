@@ -419,14 +419,22 @@ test_personas <- test_personas %>%
 test_personas <- test_personas %>% 
   mutate(jefe_hogar = if_else(test_personas$P6050==1, 1, 0)) #jefe hogar
 
-train_personas_f<- train_personas
+test_personas_f<- test_personas
 
-train_personas_f <- train_personas_f %>% subset(jefe_hogar == 1) #aqui saque base con solo jefes de hogar
+test_personas_f <- test_personas_f %>% subset(jefe_hogar == 1) #aqui saque base con solo jefes de hogar
 
+test_personas_f$Oc[is.na(test_personas_f$Oc)] <- 0
 
+test_personas_f <- test_personas_f %>% 
+  mutate(mujer = if_else(test_personas_f$P6020==2, 1, 0))
 
+test_personas_f$P6210 <- as.factor(test_personas_f$P6210)       
 
-########VOY ACA, QUIERO UNIR LO DE PERSONAS CON LO DE HOGARES PERO AUN NO SE BIEN COMO
+lower_bound_jtest <- quantile(test_personas_f$P6040, 0.01) 
+upper_bound_jtest <- quantile(test_personas_f$P6040, 0.99) 
+
+test_personas_f <- test_personas_f %>% subset(P6040 >= lower_bound_jtest)
+test_personas_f <- test_personas_f %>% subset(P6040 <= upper_bound_jtest) 
 
 
 #quiero unir lo de personas con lo de hogares, como solo lo vamos a unir con los jefes de hogar entonces no necesitamos los sum
