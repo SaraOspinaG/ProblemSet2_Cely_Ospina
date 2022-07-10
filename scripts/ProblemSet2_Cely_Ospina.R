@@ -390,18 +390,11 @@ train_personas_f <- train_personas_f %>% subset(P6040 <= upper_bound_j) #quedan 
 
 
 #quiero unir lo de personas con lo de hogares, como solo lo vamos a unir con los jefes de hogar entonces no necesitamos los sum
-
-DB<-train_personas_f %>% group_by(id) %>% summarise(jfmujer = mujer,        #Jefe del hogar es mujer
-                                                    jfocu = Oc,             #Jefe del hogar esta ocupado
-                                                    jfestrato=Estrato1,     #Estrato de jefe del hogar
-                                                    jfeduc= P6210,          #educación máxima de jefe del hogar
-                                                    jfedad= P6040,           #Edad de jefe del hogar
-                                                    jfafilidado= P6090
-) 
+DB <- select(filter(train_personas_f),c(id, mujer, Oc, Estrato1, P6210, P6040, P6090)) 
 
 
 ##Incluímos las variables que consideramos importantes de la base de personas a la de hogares
-train_hogares_f <-train_hogares_f %>% left_join(DB,by="id")
+train_hogares_total <-train_hogares_f %>% left_join(DB,by="id")
 
 
 
