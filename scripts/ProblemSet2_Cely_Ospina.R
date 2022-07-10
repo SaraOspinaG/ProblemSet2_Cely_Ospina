@@ -123,6 +123,7 @@ table1
 #                                   NA's   :159344      NA's   :64344       NA's   :100616                                       
 
 #Primero hay que volver Dominio as factor (la voy a poner en hogares y en personas de una vez)
+
 train_hogares$Dominio <- as.factor(train_hogares$Dominio)       
 class(train_hogares$Dominio)
 
@@ -215,19 +216,16 @@ table2
 lower_bound <- quantile(train_hogares$valor_arriendo, 0.07) #los valores inferiores son malos registros, ejemplo, arriendo de 99 pesos
 lower_bound
 
-upper_bound <- quantile(train_hogares$valor_arriendo, 0.998) #este valor lo escogi revisando el boxplot original pero esta sujeto a cambios, ver con sara
+upper_bound <- quantile(train_hogares$valor_arriendo, 0.99) #este valor lo escogi revisando el boxplot original pero esta sujeto a cambios, ver con sara
 upper_bound
+
 
 #duplico base
 train_hogares_f<- train_hogares
 
-train_hogares_f <- train_hogares_f %>% subset(valor_arriendo >= lower_bound) #153547
-#quitando los menores a lower_bound nos elimina 11413 observaciones
+train_hogares_f <- train_hogares_f %>% subset(valor_arriendo >= lower_bound) 
+train_hogares_f <- train_hogares_f %>% subset(valor_arriendo <= upper_bound) 
 
-train_hogares_f <- train_hogares_f %>% subset(valor_arriendo <= upper_bound) #153219 #esto es con upper_bound de 0.998
-#quitando los mayores a upper_bound nos elimina 328 observaciones
-#para un total de 11741 observaciones eliminadas por ser outliers (7,11%)
-#se podria reducir el upper_bound pero quisiera eliminar las menores observaciones posibles
 
 #ahora voy a hacer otro subset para ver como quedo esto
 train_h4 <- select(filter(train_hogares_f),c(Dominio, P5090, valor_arriendo, Nper)) 
@@ -247,20 +245,35 @@ table3
 
 
 #entonces ahora hay que hacer exactamente lo mismo en test (logica= en la vida real primero hariamos esta limpieza y luego dividiriamos la base en train y test)
-lower_boundtest <- quantile(test_hogares$valor_arriendo, 0.07) #los valores inferiores son malos registros, ejemplo, arriendo de 99 pesos
+lower_boundtest <- quantile(test_hogares$valor_arriendo, 0.07) 
 lower_boundtest
 
-####SARA HABLEMOS DE ESTE UPPER BOUND
-upper_boundtest <- quantile(test_hogares$valor_arriendo, 0.998) #este valor lo escogi revisando el boxplot original pero esta sujeto a cambios, ver con sara
+
+upper_boundtest <- quantile(test_hogares$valor_arriendo, 0.99) 
 upper_boundtest #dan valores ligeramente diferentes a los de train precisamente porque no son los mismos datos
 
 #duplico base
 test_hogares_f<- test_hogares
 
-test_hogares_f <- test_hogares_f %>% subset(valor_arriendo >= lower_boundtest) #61649
-test_hogares_f <- test_hogares_f %>% subset(valor_arriendo <= upper_boundtest) #61520 
+test_hogares_f <- test_hogares_f %>% subset(valor_arriendo >= lower_boundtest) 
+test_hogares_f <- test_hogares_f %>% subset(valor_arriendo <= upper_boundtest) 
 
 #COMPARAMOS BOXPLOTS PARA VER DISTRIBUCION DE VALOR_ARRIENDO ENTRE LA ORIGINAL Y LA NUEVA BASE
+
+#train 
+
+boxplot(train_hogares$valor_arriendo, #ORIGINAL
+        ylab = "valor arriendo"
+)
+
+
+boxplot(train_hogares_f$valor_arriendo, #NUEVA
+        ylab = "valor arriendo"
+)
+
+
+
+#test
 
 boxplot(test_hogares$valor_arriendo, #ORIGINAL
         ylab = "valor arriendo"
@@ -277,7 +290,6 @@ boxplot(test_hogares_f$valor_arriendo, #NUEVA
 ################personas
 
 intersect(names(test_personas), names(train_personas)) #aqui salen muchas mas 
-#ESTAS SON LAS QUE DEBERIAMOS METER AL ARBOL
 
 
 #############Posibles variables relevantes
@@ -390,23 +402,25 @@ tablep4
 #VEMOS= el promedio de edad de jefes de hogar es 49 a?os, 71% estan empleados, 41% son mujeres
 #otra cosa= vemos que hay outliers en edad, aun mas teniendo en cuenta que en esta base tenemos solo jefe de hogar
 
-boxplot(train_personas_f$P6040,
+boxplot(train_personas$P6040, #original
         ylab = "edad"
 )
 
-lower_bound_j <- quantile(train_personas_f$P6040, 0.01) 
-lower_bound_j #20
+lower_bound_j <- quantile(train_personas_f$P6040, 0.002) 
+lower_bound_j #18
 
-upper_bound_j <- quantile(train_personas_f$P6040, 0.99) 
+upper_bound_j <- quantile(train_personas_f$P6040, 0.998) 
 upper_bound_j #87 #de esta manera sacamos esos valores locos de mas de 100 a?os
 
-train_personas_f <- train_personas_f %>% subset(P6040 >= lower_bound_j) #orig=164960, quedan 163738
-#quitando los menores a lower_bound_j nos elimina 1222 observaciones
+train_personas_f <- train_personas_f %>% subset(P6040 >= lower_bound_j) 
 
-train_personas_f <- train_personas_f %>% subset(P6040 <= upper_bound_j) #quedan 162281
-#quitando los mayores a upper_bound_j nos elimina 1457 observaciones
-#en total eliminamos 2679 obs (1,62%)
+train_personas_f <- train_personas_f %>% subset(P6040 <= upper_bound_j)
+
+boxplot(train_personas_f$P6040, #original
+        ylab = "edad"
+)
 #SOLUCIONADOS LOS OUTLIERS DE EDAD
+
 
 #Ahora voy a hacer exactamente lo mismo pero en test
 
@@ -427,34 +441,28 @@ test_personas_f <- test_personas_f %>%
 
 test_personas_f$P6210 <- as.factor(test_personas_f$P6210)       
 
-lower_bound_jtest <- quantile(test_personas_f$P6040, 0.01) 
-upper_bound_jtest <- quantile(test_personas_f$P6040, 0.99) 
+lower_bound_jtest <- quantile(test_personas_f$P6040, 0.002) 
+upper_bound_jtest <- quantile(test_personas_f$P6040, 0.998) 
 
 test_personas_f <- test_personas_f %>% subset(P6040 >= lower_bound_jtest)
 test_personas_f <- test_personas_f %>% subset(P6040 <= upper_bound_jtest) 
 
 
-#quiero unir lo de personas con lo de hogares, como solo lo vamos a unir con los jefes de hogar entonces no necesitamos los sum
-DB <- select(filter(train_personas_f),c(id, mujer, Oc, P6210, P6040, P6090)) 
-summary(DB)
-
-##Incluímos las variables que consideramos importantes de la base de personas a la de hogares
-train_hogares_total <-train_hogares_f %>% left_join(DB,by="id")
-######base total ##########
 
 ####Base de Hogares + Personas con todas las variables
 train_hogares_personas <- train_hogares_f %>% left_join(train_personas_f,by="id")
 summary(train_hogares_personas) 
 
 
-summary(train_hogares_total)
-summary(train_hogares_f)
+is.na(train_hogares_personas)
+colSums(is.na(train_hogares_personas))
+colSums(is.na(train_hogares_personas))>0
+colnames(train_hogares_personas)[colSums(is.na(train_hogares_personas))>0]
 
-train_hogares <- train_hogares %>%
-  mutate_at(.vars = c("Clase","Dominio","P5090", "Pobre", "Indigente"), .funs = factor)
+is.na(train_hogares_personas$mujer) 
+sum(is.na(train_hogares_personas$mujer)) #no hay missing values
 
-train_personas <- train_personas %>%
-  mutate_at(.vars = c("P6020", "P6090", "P6050", "P6210", "Pet", "Oc"), .funs = factor)
+
 
 
 
