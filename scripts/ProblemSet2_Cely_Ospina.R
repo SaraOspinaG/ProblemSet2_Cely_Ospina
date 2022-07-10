@@ -644,40 +644,39 @@ hist(train_final$valor_arriendo)
 
 
 train_final <- train_final %>% 
-  mutate(hogar_pobre_pr = if_else(train_final$Ingtotugarr<=train_final$Lp, 1, 0))
+  mutate(hogar_pobre_pr = if_else(train_final$Ingtotugarr<=(train_final$Lp * train_final$Nper), 1, 0))
+#notar que tocaba multiplicar linea de pobreza por numero de personas
 
-train_final <- train_final %>% 
-  mutate(hogar_pobre_pr <- case_when(Ingtotugarr >= Lp ~ 'no',TRUE ~ 'si'))
+#hogarpobre     hogar_pobre_pr  
+#Min.   :0.0000   Min.   :0.0000  
+#1st Qu.:0.0000   1st Qu.:0.0000  
+#Median :0.0000   Median :0.0000  
+#Mean   :0.1923   Mean   :0.1928  
+#3rd Qu.:0.0000   3rd Qu.:0.0000  
+#Max.   :1.0000   Max.   :1.0000  
+
 
 summary(train_final$hogarpobre)
 
-
 compare<- select(filter(train_final),c(hogarpobre, hogar_pobre_pr)) 
 table_compare <- summary(compare)  
-table_compare #construyendo hogares con la logica de ingtotugarr < Lp, no nos da los reales pobres que determina el DANE
+table_compare 
 
-#experimentar= que pasa si le restamos el valor de arriendo a ese ingreso
 
-train_final <- train_final %>% 
-  mutate(ing_menos_arr = (train_final$Ingtotugarr - train$final$valor_arriendo))
-
-train_final$ing_menos_arr <- train_final$Ingtotugarr - train$final$valor_arriendo ###VOY ACA####################
-class(train_final$Ingtotugarr) 
-class(train_final$valor_arriendo) #ambas son labelled numeric, sera por eso que no las deja restar?
 
 
 
 #3. Dividir
 ##Primero partimos la base de entrenamiento, se parte en 80% - 20% por ser la forma en la que se comporta la variable de pobreza 
 set.seed(123)
-split1<-createDataPartition(train_final$Pobre, p = .8)[[1]]
+split1<-createDataPartition(train_final$hogarpobre, p = .8)[[1]]
 length(split1)
 
 other<-train_final[-split1,]
 training <-train_final[split1,]
 
 ##Ahora partimos para obtener las bases de evaluacion y prueba
-split2<- createDataPartition(other$Pobre, p= 1/3) [[1]]
+split2<- createDataPartition(other$hogarpobre, p= 1/3) [[1]]
 evaluation<-other[split2,]
 testing<-other[-split2,]
 
