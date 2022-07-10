@@ -525,11 +525,7 @@ testing<-other[-split2,]
 
 ##Classification Models: (este es pobre 1 o 0)#######################################
 
-#Logit Simple
-#Logit con Lasso
-#Logit con Lasso y cambio en cutoff
-#Logit con Lasso y resampleo
-#Arbol normal
+
 
 
 #########################
@@ -556,7 +552,76 @@ adaboost <- train(
 )
 
 
+#Logit Simple
 
+ctrl_def<- trainControl(method = "cv", 
+                        number = 5,
+                        summaryFunction = defaultSummary,   #Si fuera para una regresion seria MSE o RMSE
+                        classProbs = TRUE,
+                        verbose = FALSE,
+                        savePredictions = T)
+
+set.seed(123)
+mylogit_caret_deg <- train (
+  Default~amount+installment+age+history.....,     #poner aqui el modelo que mejor corrió con los árboles
+  data = training,
+  method = "glm",
+  trControl = ctrl_def,
+  family = "binomial",
+  preProcess = c("center", "scale")
+)
+
+
+#Revisar si se hace con el twoClassSummary y el FiveStats
+
+#Logit con Lasso
+
+lambda_grid <- 10^seq(-4, 0.01, lenght = 200)
+lambda_grid
+
+set.seed(123)
+mylogit_lasso_acc <- train(
+  Default~amount+installment+age+....,    
+  data = training,
+  method = "glmnet",
+  trControl = ctrl,
+  family = "Sens",
+  tuneGrid = expand.grid(alpha = 0, lambda=lambda_grid),
+  preProcess = c("center", "scale")
+)
+
+mylogit_lasso_acc
+
+
+#Logit con Lasso y cambio en cutoff
+
+evalResults <- data.frame(Pobre = evaluation$Pobre)
+evalReults$Roc <- predict(mylogit_lasso_roc,
+                          newdata = evaluation,
+                          type = "prob") [,1]
+
+library(pROC)
+rfROC <- roc(evalResults$Pobre, evalResults$Roc, levels = rev(levels(evalResults$Pobre)))
+rfROC
+
+rfThresh <- coords(rfROC, x = "best", best.method = "closest.topleft")
+rfThresh
+
+evalResults <- evalResults %>% mutate(hat_def_05=ifelse(evalResults$ROC>0.5,"Si","No"),
+                                      hat_def_rfThresh=ifelse(evalResults$ROC>rfThresh$threshold,"Si","No"))
+
+with(evalResults,table(Pobre,hat_de_05))
+
+with (evalResults,table(Default,hat_def_rfThresh))
+
+                                      
+                                      
+
+
+
+
+#Logit con Lasso y resampleo
+#Arbol normal
 
 
 ##5. Regresiones
