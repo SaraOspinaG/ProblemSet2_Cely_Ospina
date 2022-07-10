@@ -442,24 +442,71 @@ upper_bound_jtest <- quantile(test_personas_f$P6040, 0.998)
 test_personas_f <- test_personas_f %>% subset(P6040 >= lower_bound_jtest)
 test_personas_f <- test_personas_f %>% subset(P6040 <= upper_bound_jtest) 
 
-
+#####
+#Unir Train
+############
+Personas <- select(filter(train_personas_f),c(id, mujer, Oc, P6210, P6040, P6090, P7510s3, P7510s5)) 
+summary(Personas)
+summary(train_hogares_f)
 
 ####Base de Hogares + Personas con todas las variables
-train_hogares_personas <- train_hogares_f %>% left_join(train_personas_f,by="id")
+train_hogares_personas <- left_join(train_hogares_f, Personas)
 summary(train_hogares_personas) 
 
-
-is.na(train_hogares_personas)
-colSums(is.na(train_hogares_personas))
-colSums(is.na(train_hogares_personas))>0
-colnames(train_hogares_personas)[colSums(is.na(train_hogares_personas))>0]
-
-is.na(train_hogares_personas$mujer) 
-sum(is.na(train_hogares_personas$mujer)) #no hay missing values
+train_final <- train_hogares_personas %>% drop_na(c("mujer", "Oc", "P6210"))
+summary(train_final) 
 
 
+#Ajustar si recibió subsidios en train
+train_final <- train_final %>% 
+  mutate(P7510s3 = if_else(train_final$P7510s3==1, 1, 0))
+train_final$P7510s3[is.na(train_final$P7510s3)] <- 0 
 
 
+#Ajustar si tiene productos financieros en train
+train_final <- train_final %>% 
+  mutate(P7510s5 = if_else(train_final$P7510s5==1, 1, 0))
+train_final$P7510s5[is.na(train_final$P7510s5)] <- 0 
+
+
+###
+#Unir Test
+PersonasT <- select(filter(test_personas_f),c(id, mujer, Oc, P6210, P6040, P6090, P7510s3, P7510s5)) 
+summary(PersonasT)
+summary(test_personas_f)
+
+####Base de Hogares + Personas con todas las variables
+test_hogares_personas <- left_join(test_hogares_f, PersonasT)
+summary(test_hogares_personas) 
+
+test_final <- test_hogares_personas %>% drop_na(c("mujer", "Oc", "P6210"))
+
+#Ajustar si recibió subsidios en train
+test_final <- test_final %>% 
+  mutate(P7510s3 = if_else(test_final$P7510s3==1, 1, 0))
+test_final$P7510s3[is.na(test_final$P7510s3)] <- 0 
+
+
+#Ajustar si tiene productos financieros en train
+test_final <- test_final %>% 
+  mutate(P7510s5 = if_else(test_final$P7510s5==1, 1, 0))
+test_final$P7510s5[is.na(test_final$P7510s5)] <- 0 
+
+summary(test_final) 
+
+
+##Primero partimos la base de entrenamiento, se parte en 80% - 20% por ser la forma en la que se comporta la variable de pobreza 
+set.seed(123)
+split1<-createDataPartition(train_final$Pobre = .8)[[1]]
+length(split1)
+
+other<-train_final[-split1]
+training <-train_final[split1]
+
+##Ahora partimos para obtener las bases de evaluacion y prueba
+split2<- createDataPartition(other$Pobre, p=1/3) [[1]]
+evaluation<-other[split2]
+testing<-other[-split2]
 
 
 
