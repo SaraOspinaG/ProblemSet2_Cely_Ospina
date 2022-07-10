@@ -85,11 +85,11 @@ intersect(names(test_hogares), names(train_hogares))
 var_lab(train_hogares$P5090) = "Tipo de ocupacion de la vivienda"
 val_lab(train_hogares$P5090) = num_lab("
              1 Propia 
-             2 Propia pagando 
+             2 Propia_pagando 
              3 Arriendo
              4 Usufructo
-             5 Posesion sin titulo
-             6 Otra
+             5 Posesion_sin_titulo
+             6 Otra_posesion
 ")
 var_lab(train_hogares$P5100) = "Cuota de amortizacion mensual"
 var_lab(train_hogares$P5130) = "Valor estimado de arriendo mensual"
@@ -573,6 +573,60 @@ colnames(test_final)[colSums(is.na(test_final))>0] #nuevamente solo nos quedan N
 #2. Estadistica descriptiva general
 ###############################
 
+
+############################consideraciones variables explicativas ##########
+#SOBRE VARIABLE P5090
+#para poder sacar conclusiones sobre esta variable (tipo de posesion de la vivienda) hay que volverla dummys
+
+#recordar esto:
+#val_lab(train_hogares$P5090) = num_lab("
+#             1 Propia 
+#             2 Propia pagando 
+#             3 Arriendo
+#             4 Usufructo
+#             5 Posesion sin titulo
+#             6 Otra_posesion
+#")
+
+train_final <- train_final %>% mutate(propiedad= train_final$P5090)
+
+train_final<- train_final %>% mutate(dummy=1) %>%
+  spread(key=propiedad,value=dummy, fill=0) #notar que aqui aumenta el numero de variables
+
+
+#lo mismo lo voy a hacer con la de educacion
+#la cosa es que educacion trae nombres rarisimos entonces creo que la voy a hacer a mano
+
+train_final <- train_final %>% mutate(educ= train_final$P6210)
+
+class(train_final$educ)
+colnames(train_final)
+#              "Ninguno"                     "Preescolar"                 
+#[40] "Básica primaria (1o - 5o)"   "Básica secundaria (6o - 9o)" "Media (10o - 13o)"          
+#[43] "Superior o universitaria"    "No sabe, no informa"      
+
+train_final <- train_final %>% 
+  mutate(sin_educ = if_else(train_final$P6210=="Ninguno", 1, 0))
+
+train_final <- train_final %>% 
+  mutate(preescolar = if_else(train_final$P6210=="Preescolar", 1, 0))
+
+train_final <- train_final %>% 
+  mutate(primaria = if_else(train_final$P6210=="Básica primaria (1o - 5o)", 1, 0))
+
+train_final <- train_final %>% 
+  mutate(secundaria = if_else(train_final$P6210=="Básica secundaria (6o - 9o)", 1, 0))
+
+train_final <- train_final %>% 
+  mutate(bachillerato_completo = if_else(train_final$P6210=="Media (10o - 13o)", 1, 0))
+
+train_final <- train_final %>% 
+  mutate(superior = if_else(train_final$P6210=="Superior o universitaria", 1, 0))
+
+train_final <- train_final %>% 
+  mutate(educ_ns_nr = if_else(train_final$P6210=="No sabe, no informa", 1, 0))
+
+
 #querremos mostrar las variables que nos interesan en TRAIN
 #como ya no tenemos hogares y personas por separado, sacamos este analisis en las bases final
 
@@ -717,7 +771,6 @@ test_final %>%
 summary(test_final$valor_arriendo)
 hist(test_final$valor_arriendo) #dan parecidos
 
-#aqui se le pueden añadir mas tablas si quisieramos pero creo que debido a que el documento es tan acotado, podemos por ahora dejar con estas basicas
 
 #####Tener Pobre como factor para que los modelos que corra con caret funcionen
 train_final <- train_final %>% mutate(hogar_es_pobre= train_final$hogarpobre)
@@ -747,7 +800,7 @@ testing<-other[-split2,]
 #Por otro lado
 #TEST_FINAL:   60845 obs  #en esta es donde haremos la prueba final final no va mas
 
-
+################################################################################################
 ##4. Modelos de Clasificación
 #Pobre
 
@@ -755,7 +808,7 @@ testing<-other[-split2,]
 ##Predecir pobreza
 
 
-##Classification Models: (este es pobre 1 o 0)#######################################
+##Classification Models: (este es si pobre 1 o 0)#######################################
 
 #########################
 ###   AdaBoost   ########
@@ -765,14 +818,23 @@ testing<-other[-split2,]
 
 #en clasificacion nuestra variable Y es si es pobre o no es pobre
 
-summary(train_final$hogarpobre) #19% pobres
+summary(training$hogarpobre) #19% pobres
 
 
 #le voy a lanzar un monton de variables a ver cuales pone como importantes
+#sin embargo recordar que tienen que estar en test_final tambien
+intersect(names(training), names(test_final))
+
+#[1] "id"             "Clase"          "Dominio"        "P5000"          "P5010"          "P5090"         
+#[7] "P5100"          "P5130"          "P5140"          "Nper"           "Npersug"        "Li"            
+#[13] "Lp"             "Fex_c"          "Depto"          "Fex_dpto"       "valor_arriendo" "mujer"         
+#[19] "Oc"             "P6210"          "P6040"          "P6090"          "P7510s3"        "P7510s5"
+
+class(training$Dominio) #factor
 
 set.seed(123)
-adaboost <- train_final(
-  hogarpobre ~amount+installment+age+ historygood + historypoor + purposeusedcar+ purposegoods.repair + purposeedu + foreigngerman + rentTR
+adaboost <- training(
+  hogarpobre ~ P5000 + P5010 + amount+installment+age+ historygood + historypoor + purposeusedcar+ purposegoods.repair + purposeedu + foreigngerman + rentTR
   data = train_hogares_total, #aqui poner la base final
   method = "adaboost",
   trControl = ctrl,
@@ -863,8 +925,8 @@ with(evalResults,table(Pobre,hat_de_05))
 
 with (evalResults,table(Default,hat_def_rfThresh))
 
-                                      
-                                      
+
+
 
 
 
@@ -875,6 +937,10 @@ with (evalResults,table(Default,hat_def_rfThresh))
 
 ##5. Regresiones
 #Ingreso
+
+
+
+
 
 
 
