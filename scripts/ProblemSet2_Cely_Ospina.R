@@ -525,6 +525,13 @@ testing<-other[-split2,]
 
 ##Classification Models: (este es pobre 1 o 0)#######################################
 
+#Logit Simple
+#Logit con Lasso
+#Logit con Lasso y cambio en cutoff
+#Logit con Lasso y resampleo
+#Arbol normal
+
+
 #########################
 ###   AdaBoost   ########
 #########################
