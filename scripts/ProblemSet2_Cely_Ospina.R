@@ -638,6 +638,33 @@ hist(train_final$valor_arriendo)
 
 #aqui se le pueden añadir mas tablas si quisieramos pero creo que debido a que el documento es tan acotado, podemos por ahora dejar con estas basicas
 
+##
+#Prueba de como se mide la pobreza
+#aqui vamos a ver si midiendo si un hogar es pobre "a mano" podemos llegar a los mismos resultados que el dane
+
+
+train_final <- train_final %>% 
+  mutate(hogar_pobre_pr = if_else(train_final$Ingtotugarr<=train_final$Lp, 1, 0))
+
+train_final <- train_final %>% 
+  mutate(hogar_pobre_pr <- case_when(Ingtotugarr >= Lp ~ 'no',TRUE ~ 'si'))
+
+summary(train_final$hogarpobre)
+
+
+compare<- select(filter(train_final),c(hogarpobre, hogar_pobre_pr)) 
+table_compare <- summary(compare)  
+table_compare #construyendo hogares con la logica de ingtotugarr < Lp, no nos da los reales pobres que determina el DANE
+
+#experimentar= que pasa si le restamos el valor de arriendo a ese ingreso
+
+train_final <- train_final %>% 
+  mutate(ing_menos_arr = (train_final$Ingtotugarr - train$final$valor_arriendo))
+
+train_final$ing_menos_arr <- train_final$Ingtotugarr - train$final$valor_arriendo ###VOY ACA####################
+class(train_final$Ingtotugarr) 
+class(train_final$valor_arriendo) #ambas son labelled numeric, sera por eso que no las deja restar?
+
 
 
 #3. Dividir
