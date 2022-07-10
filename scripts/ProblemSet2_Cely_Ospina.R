@@ -4,7 +4,6 @@
 ###### Julio 2022 #################
 ###################################
 
-
 #Motivation: targeted questions that rapidly and cheaply measure the effectiveness of new policies and interventions
 #Predictions: household level only 
 
@@ -35,7 +34,7 @@ p_load(tidyverse,    #Para limpiar los datos
 predict<- stats::predict  #con esto soluciono el problema de que haya mas de una libreria con este comando
 
 
-
+#####################
 ##cargar los datos
 
 ##Establecer el directorio
@@ -43,18 +42,19 @@ predict<- stats::predict  #con esto soluciono el problema de que haya mas de una
 #setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
 setwd("C:/Users/Camila Cely/Documents/GitHub/ProblemSet2_Cely_Ospina")
 
-
 ##traer las bases de train y de test
 train_hogares<-readRDS("stores/train_hogares.Rds")
 train_personas<-readRDS("stores/train_personas.Rds")
 test_hogares<-readRDS("stores/test_hogares.Rds")
 test_personas<-readRDS("stores/test_personas.Rds")
 
+#####################
 ##1. Limpieza de datos: 
 ###################
 
-#cuales son las variables que aparecen tanto en train como en test
-#########hogares
+#cuales son las variables que aparecen tanto en train como en test###########################################
+
+#########     hogares  ##################################
 
 intersect(names(test_hogares), names(train_hogares))
 #[1] "id"       "Clase"    "Dominio"  "P5000"    "P5010"    "P5090"    "P5100"    "P5130"    "P5140"    "Nper"    
@@ -181,7 +181,7 @@ train_hogares$P5130 <- as.numeric(train_hogares$P5130) #aqui ya quedan numeric
 
 test_hogares$P5140 <- as.numeric(test_hogares$P5140)
 test_hogares$P5090 <- as.numeric(test_hogares$P5090)
-test_hogares$P5130 <- as.numeric(test_hogares$P5130)#hago lo mismo pero en test
+test_hogares$P5130 <- as.numeric(test_hogares$P5130) #hago lo mismo pero en test
 
 train_hogares <- train_hogares %>% 
   mutate(valor_arriendo = if_else(train_hogares$P5090==3, train_hogares$P5140, train_hogares$P5130))
@@ -211,20 +211,24 @@ table2
 #(Other)     :99680   
 #######VEMOS QUE AHORA SI YA NO TENEMOS MISSINGS****************
 
+
 ###Pero tenemos outliers aun
 
-lower_bound <- quantile(train_hogares$valor_arriendo, 0.07) #los valores inferiores son malos registros, ejemplo, arriendo de 99 pesos
-lower_bound
+lower_arriendo<-0.07
+upper_arriendo<-0.99
 
-upper_bound <- quantile(train_hogares$valor_arriendo, 0.99) #este valor lo escogi revisando el boxplot original pero esta sujeto a cambios, ver con sara
-upper_bound
+lower_bound_atr <- quantile(train_hogares$valor_arriendo, lower_arriendo) #los valores inferiores son malos registros, ejemplo, arriendo de 99 pesos
+lower_bound_atr
+
+upper_bound_atr <- quantile(train_hogares$valor_arriendo, upper_arriendo) #este valor lo escogimos entre sara y yo, el valor mas alto queda en 2.000.000
+upper_bound_atr
 
 
-#duplico base
+#duplico base para quitar los outliers sin modificar la original
 train_hogares_f<- train_hogares
 
-train_hogares_f <- train_hogares_f %>% subset(valor_arriendo >= lower_bound) 
-train_hogares_f <- train_hogares_f %>% subset(valor_arriendo <= upper_bound) 
+train_hogares_f <- train_hogares_f %>% subset(valor_arriendo >= lower_bound_atr) 
+train_hogares_f <- train_hogares_f %>% subset(valor_arriendo <= upper_bound_atr) 
 
 
 #ahora voy a hacer otro subset para ver como quedo esto
@@ -232,31 +236,37 @@ train_h4 <- select(filter(train_hogares_f),c(Dominio, P5090, valor_arriendo, Npe
 table3 <- summary(train_h4)  
 table3
 
-#         Dominio          P5090      valor_arriendo         Nper       
-#RESTO URBANO:16490   Min.   :1.00   Min.   :  40000   Min.   : 1.000  
-#RURAL       :12913   1st Qu.:1.00   1st Qu.: 250000   1st Qu.: 2.000  
-#BOGOTA      : 9466   Median :3.00   Median : 400000   Median : 3.000  
-#MEDELLIN    : 8568   Mean   :2.49   Mean   : 448287   Mean   : 3.303  
-#CALI        : 6422   3rd Qu.:3.00   3rd Qu.: 530000   3rd Qu.: 4.000  
-#BARRANQUILLA: 6313   Max.   :6.00   Max.   :4000000   Max.   :28.000  
-#(Other)     :93047 
+
+#Dominio          P5090       valor_arriendo         Nper       
+#RESTO URBANO:16473   Min.   :1.000   Min.   :  40000   Min.   : 1.000  
+#RURAL       :12903   1st Qu.:1.000   1st Qu.: 250000   1st Qu.: 2.000  
+#BOGOTA      : 9185   Median :3.000   Median : 400000   Median : 3.000  
+#MEDELLIN    : 8438   Mean   :2.494   Mean   : 434245   Mean   : 3.304  
+#CALI        : 6383   3rd Qu.:3.000   3rd Qu.: 500000   3rd Qu.: 4.000  
+#BARRANQUILLA: 6252   Max.   :6.000   Max.   :2000000   Max.   :28.000  
+#(Other)     :92722 
+
 
 #### YA QUEDO MEJOR VALOR_ARRIENDO
 
 
-#entonces ahora hay que hacer exactamente lo mismo en test (logica= en la vida real primero hariamos esta limpieza y luego dividiriamos la base en train y test)
-lower_boundtest <- quantile(test_hogares$valor_arriendo, 0.07) 
-lower_boundtest
+
+#ahora lo hago en TEST con los mismos valores upper y lower
+#guarde elementos llamados lower_bound_a y upper_bound_a para que quede coordinado y no toque cambiar los numeros a mano
 
 
-upper_boundtest <- quantile(test_hogares$valor_arriendo, 0.99) 
-upper_boundtest #dan valores ligeramente diferentes a los de train precisamente porque no son los mismos datos
-
-#duplico base
 test_hogares_f<- test_hogares
 
-test_hogares_f <- test_hogares_f %>% subset(valor_arriendo >= lower_boundtest) 
-test_hogares_f <- test_hogares_f %>% subset(valor_arriendo <= upper_boundtest) 
+lower_bound_ate <- quantile(test_hogares$valor_arriendo, lower_arriendo) #los valores inferiores son malos registros, ejemplo, arriendo de 99 pesos
+lower_bound_ate
+
+upper_bound_ate <- quantile(test_hogares$valor_arriendo, upper_arriendo) #este valor lo escogimos entre sara y yo, el valor mas alto queda en 2.000.000
+upper_bound_ate
+#notar que los valores quedan un poquito diferentes porque las bases son distintas, pero quedan valores cercanos
+
+
+test_hogares_f <- test_hogares_f %>% subset(valor_arriendo >= lower_bound_ate) 
+test_hogares_f <- test_hogares_f %>% subset(valor_arriendo <= upper_bound_ate) 
 
 #COMPARAMOS BOXPLOTS PARA VER DISTRIBUCION DE VALOR_ARRIENDO ENTRE LA ORIGINAL Y LA NUEVA BASE
 
@@ -285,9 +295,14 @@ boxplot(test_hogares_f$valor_arriendo, #NUEVA
 )
 
 
+## Ya quedo. Notar que en esta parte de hogares, fuimos haciendo en paralelo las cosas en train y en test
 
+
+
+##################################################################
+# Ahora la base personas 
 #cuales son las variables que aparecen tanto en train como en test
-################personas
+################   personas   ####################################
 
 intersect(names(test_personas), names(train_personas)) #aqui salen muchas mas 
 
@@ -319,23 +334,17 @@ tablep1
 #Vemos que en Pet, Oc y nivel educativo hay muchos missings
 #pero la verdad creo que no importa por ahora porque lo que yo quiero es ver esto para el jefe de hogar
 
-#analicemos jefes de hogar###########
+#analicemos jefes de hogar ###########
 
 summary(train_personas$P6050)
 
-#Ajustamos el comportamiento de afiliado para que no sabe, no responda sea 0
-train_personas <- train_personas %>% 
-  mutate(P6090 = if_else(train_personas$P6090==1, 1, 0))
-summary(train_personas$P6090) #93% de los encuestados están ailiados al sistema de salud, es probable que personas pobres estén afiliadas
-
-
-#voy a crear una variable de solo jefe de hogar
+#voy a crear una variable de solo jefe de hogar, toma valor de 1 para jefe de hogar y 0 para el resto
 train_personas <- train_personas %>% 
   mutate(jefe_hogar = if_else(train_personas$P6050==1, 1, 0))
 
-summary(train_personas$jefe_hogar) #30% de los encuestados son jefes de hogar
+summary(train_personas$jefe_hogar) #30% de los encuestados son jefes de hogar #ademas= todos los hogares de la muestra tienen jefe de hogar
 
-train_personas_f<- train_personas
+train_personas_f<- train_personas #duplico para poder sacar una submuestra de personas que solo incluya a los jefes de hogar
 
 train_personas_f <- train_personas_f %>% subset(jefe_hogar == 1) #aqui saque base con solo jefes de hogar
 
@@ -356,11 +365,11 @@ tablep3
 #Des = 7645 individuos (4,63% de los jefes de hogar) #intuicion= estos nos ayudan a predecir pobres
 #Ina = 40080 individuos (24,29% de los jefes de hogar) #que querra decir que el jefe de hogar esta inactivo... pobre o no pobre?
 #total = 164959
-#por lo tanto vemos que en realidad hay UN missing value (total individuos 164960) #no es representativo
+#por lo tanto vemos que en realidad hay UN missing value (total individuos 164960) #no es representativo, se puede cambiar por cero
 
 #como no podemos usar las tres variables porque habria multicolinearidad, voy a ponerle valor de 0 a todos los missings de Oc
 #porque a partir del analisis anterior sabemos que realmente esos missings corresponden a gente que no esta trabajando
-#y no son verdaderos missings
+#y NO son verdaderos missings
 
 summary(train_personas_f$Oc)
 class(train_personas_f$Oc)
@@ -369,7 +378,7 @@ head(train_personas_f$Oc)
 train_personas_f$Oc[is.na(train_personas_f$Oc)] <- 0 #aqui lo que hice fue cambiar los NA de Oc por valor de cero
 head(train_personas_f$Oc)  #comprobar que quedo bien
 
-#voy a crearle variable de mujer
+#voy a crearle variable de mujer, toma valor de 1 si el individuo es mujer, 0 si no
 train_personas_f <- train_personas_f %>% 
   mutate(mujer = if_else(train_personas_f$P6020==2, 1, 0))
 
@@ -379,83 +388,137 @@ train_personas_f$P6210 <- as.factor(train_personas_f$P6210)
 class(train_personas_f$P6210)
 
 
+#Ajustamos el comportamiento de afiliado para que no sabe, no responda sea igual a 0
+
+summary(train_personas_f$P6090) #solo hay UN NA porque los que responden esta pregunta son jefes de hogar, asumimos que los NAs de la base original eran los hijos
+#por lo tanto no hay problema en cambiar este unico NA por valor de 0
+
+#veamos un histograma de como se comporta
+
+hist(train_personas_f$P6090) #los valores distintos a 1 son muy pocos, en todo caso vamos a unificarlos para volverla dummy
+
+#aqui vamos a cambiar el valor de 9 por el valor de 0
+train_personas_f <- train_personas_f %>% 
+  mutate(P6090 = if_else(train_personas_f$P6090==1, 1, 0))
+
+#vemos como queda
+summary(train_personas_f$P6090) #94% de los encuestados están ailiados al sistema de salud, es probable que personas pobres estén afiliadas
+
+#por ultimo, cambiamos el NA por cero
+train_personas_f$P6090[is.na(train_personas_f$P6090)] <- 0 #aqui lo que hice fue cambiar los NA por valor de cero
+summary(train_personas_f$P6090) #ya no tiene NAs
+
+
 #ahora veamos como queda
 
-train_p4 <- select(filter(train_personas_f),c(P6040, Oc, P6210, mujer)) #quite Pet para centrarnos en Oc
+train_p4 <- select(filter(train_personas_f),c(P6040, Oc, P6210, mujer, P6090)) #quite Pet para centrarnos en Oc
 tablep4 <- summary(train_p4) 
 tablep4
 
-#    P6040             Oc                           P6210                  mujer       
-#Min.   : 11.0   Min.   :0.0000   Ninguno                    : 8603   Min.   :0.0000  
-#1st Qu.: 37.0   1st Qu.:0.0000   Preescolar                 :   13   1st Qu.:0.0000  
-#Median : 49.0   Median :1.0000   B?sica primaria (1o - 5o)  :46619   Median :0.0000  
-#Mean   : 49.6   Mean   :0.7107   B?sica secundaria (6o - 9o):21616   Mean   :0.4164  
-#3rd Qu.: 61.0   3rd Qu.:1.0000   Media (10o - 13o)          :43028   3rd Qu.:1.0000  
-#Max.   :108.0   Max.   :1.0000   Superior o universitaria   :45061   Max.   :1.0000  
-#No sabe, no informa        :   20                   
+#P6040             Oc                                 P6210           mujer            P6090       
+#Min.   : 11.0   Min.   :0.0000   Ninguno                    : 8603   Min.   :0.0000   Min.   :0.0000  
+#1st Qu.: 37.0   1st Qu.:0.0000   Preescolar                 :   13   1st Qu.:0.0000   1st Qu.:1.0000  
+#Median : 49.0   Median :1.0000   Básica primaria (1o - 5o)  :46619   Median :0.0000   Median :1.0000  
+#Mean   : 49.6   Mean   :0.7107   Básica secundaria (6o - 9o):21616   Mean   :0.4164   Mean   :0.9402  
+#3rd Qu.: 61.0   3rd Qu.:1.0000   Media (10o - 13o)          :43028   3rd Qu.:1.0000   3rd Qu.:1.0000  
+#Max.   :108.0   Max.   :1.0000   Superior o universitaria   :45061   Max.   :1.0000   Max.   :1.0000  
+#                                 No sabe, no informa        :   20                                    
+
+
 
 #VEMOS= el promedio de edad de jefes de hogar es 49 a?os, 71% estan empleados, 41% son mujeres
-#otra cosa= vemos que hay outliers en edad, aun mas teniendo en cuenta que en esta base tenemos solo jefe de hogar
+#otra cosa= vemos que hay outliers en edad (P6040), aun mas teniendo en cuenta que en esta base tenemos solo jefe de hogar
 
-boxplot(train_personas$P6040, #original
+
+#analisis de distribucion de la edad
+boxplot(train_personas_f$P6040, #original
         ylab = "edad"
 )
 
-lower_bound_j <- quantile(train_personas_f$P6040, 0.002) 
-lower_bound_j #18
+#vamos a ponerle limites inferior y superior principalmente porque hay unos valores por encima de 100
+lower_bound_ed<-0.002
+upper_bound_ed<-0.998
 
-upper_bound_j <- quantile(train_personas_f$P6040, 0.998) 
-upper_bound_j #87 #de esta manera sacamos esos valores locos de mas de 100 a?os
+lower_bound_etr <- quantile(train_personas_f$P6040, lower_bound_ed)  
+lower_bound_etr #18
 
-train_personas_f <- train_personas_f %>% subset(P6040 >= lower_bound_j) 
+upper_bound_etr <- quantile(train_personas_f$P6040, upper_bound_ed) 
+upper_bound_etr #93 #de esta manera sacamos esos valores locos de mas de 100 a?os
 
-train_personas_f <- train_personas_f %>% subset(P6040 <= upper_bound_j)
+train_personas_f <- train_personas_f %>% subset(P6040 >= lower_bound_etr) 
 
-boxplot(train_personas_f$P6040, #original
+train_personas_f <- train_personas_f %>% subset(P6040 <= upper_bound_etr) #aqui modificamos la base para sacar a estas personas outliers de edad
+#quedan 164512
+
+boxplot(train_personas_f$P6040, #nueva version
         ylab = "edad"
 )
 #SOLUCIONADOS LOS OUTLIERS DE EDAD
 
 
-#Ahora voy a hacer exactamente lo mismo pero en test
+#Ahora voy a hacer exactamente lo mismo pero en test, de corrido
 
 test_personas <- test_personas %>% 
-  mutate(P6090 = if_else(test_personas$P6090==1, 1, 0)) #salud
-
-test_personas <- test_personas %>% 
-  mutate(jefe_hogar = if_else(test_personas$P6050==1, 1, 0)) #jefe hogar
+  mutate(jefe_hogar = if_else(test_personas$P6050==1, 1, 0)) #crear jefe hogar
 
 test_personas_f<- test_personas
 
-test_personas_f <- test_personas_f %>% subset(jefe_hogar == 1) #aqui saque base con solo jefes de hogar
+test_personas_f <- test_personas_f %>% subset(jefe_hogar == 1) #aqui saque base con solo jefes de hogar #66168
 
-test_personas_f$Oc[is.na(test_personas_f$Oc)] <- 0
 
 test_personas_f <- test_personas_f %>% 
-  mutate(mujer = if_else(test_personas_f$P6020==2, 1, 0))
+  mutate(P6090 = if_else(test_personas_f$P6090==1, 1, 0)) #salud
 
-test_personas_f$P6210 <- as.factor(test_personas_f$P6210)       
+summary(test_personas_f$P6090) #continua habiendo 1 NA
+test_personas_f$P6090[is.na(test_personas_f$P6090)] <- 0 #solucionado
 
-lower_bound_jtest <- quantile(test_personas_f$P6040, 0.002) 
-upper_bound_jtest <- quantile(test_personas_f$P6040, 0.998) 
 
-test_personas_f <- test_personas_f %>% subset(P6040 >= lower_bound_jtest)
-test_personas_f <- test_personas_f %>% subset(P6040 <= upper_bound_jtest) 
+test_personas_f$Oc[is.na(test_personas_f$Oc)] <- 0 #cambiar NA de Oc
 
-#####
+test_personas_f <- test_personas_f %>% 
+  mutate(mujer = if_else(test_personas_f$P6020==2, 1, 0)) #crear variable mujer
+
+test_personas_f$P6210 <- as.factor(test_personas_f$P6210)        #educ as factor
+
+
+lower_bound_ete <- quantile(test_personas_f$P6040, lower_bound_ed)  
+lower_bound_ete #18
+
+upper_bound_ete <- quantile(test_personas_f$P6040, upper_bound_ed) 
+upper_bound_ete #93 
+
+test_personas_f <- test_personas_f %>% subset(P6040 >= lower_bound_ete) 
+test_personas_f <- test_personas_f %>% subset(P6040 <= upper_bound_ete) #quitar outliers de edad 
+
+#65981
+
+
+
+#################################
 #Unir Train
 ############
 Personas <- select(filter(train_personas_f),c(id, mujer, Oc, P6210, P6040, P6090, P7510s3, P7510s5)) 
-summary(Personas)
+summary(Personas) #aqui vemos que los missing values que no hemos abordado son los de las variables de subsidios y de productos financieros
+#mas adelante lo ajustamos
+
 summary(train_hogares_f)
 
 ####Base de Hogares + Personas con todas las variables
 train_hogares_personas <- left_join(train_hogares_f, Personas)
 summary(train_hogares_personas) 
 
-train_final <- train_hogares_personas %>% drop_na(c("mujer", "Oc", "P6210"))
+train_final <- train_hogares_personas %>% drop_na(c("mujer", "Oc", "P6210")) #374 NAs que se generan realizando el cruce
 summary(train_final) 
 
+#vemos en cuales variables de train_final hay NAs
+
+is.na(train_final)
+colSums(is.na(train_final))
+colSums(is.na(train_final))>0
+colnames(train_final)[colSums(is.na(train_final))>0] #"P5100"   "P5130"   "P5140"   "P7510s3" "P7510s5"
+#no hay problema con esas variables de missings porque P5100, P5130 y P5140 estan conectadas entre si y juntas crean valor_arriendo, que no tiene NAs
+
+#con respecto a "P7510s3" "P7510s5", vamos a ajustarlas=
 
 #Ajustar si recibió subsidios en train
 train_final <- train_final %>% 
@@ -468,35 +531,49 @@ train_final <- train_final %>%
   mutate(P7510s5 = if_else(train_final$P7510s5==1, 1, 0))
 train_final$P7510s5[is.na(train_final$P7510s5)] <- 0 
 
+is.na(train_final)
+colSums(is.na(train_final))
+colSums(is.na(train_final))>0
+colnames(train_final)[colSums(is.na(train_final))>0] #ahora si nos salen solo las de arriendo con missings, ya quedo bien
 
-###
+############################
 #Unir Test
 PersonasT <- select(filter(test_personas_f),c(id, mujer, Oc, P6210, P6040, P6090, P7510s3, P7510s5)) 
 summary(PersonasT)
+
 summary(test_personas_f)
 
 ####Base de Hogares + Personas con todas las variables
 test_hogares_personas <- left_join(test_hogares_f, PersonasT)
 summary(test_hogares_personas) 
 
-test_final <- test_hogares_personas %>% drop_na(c("mujer", "Oc", "P6210"))
+test_final <- test_hogares_personas %>% drop_na(c("mujer", "Oc", "P6210")) #se generan 156 missings en el cruce
 
-#Ajustar si recibió subsidios en train
+#Ajustar si recibió subsidios en test
 test_final <- test_final %>% 
   mutate(P7510s3 = if_else(test_final$P7510s3==1, 1, 0))
 test_final$P7510s3[is.na(test_final$P7510s3)] <- 0 
 
 
-#Ajustar si tiene productos financieros en train
+#Ajustar si tiene productos financieros en test
 test_final <- test_final %>% 
   mutate(P7510s5 = if_else(test_final$P7510s5==1, 1, 0))
 test_final$P7510s5[is.na(test_final$P7510s5)] <- 0 
 
 summary(test_final) 
 
-#2. Estadistica descriptiva
-###############################
+is.na(test_final)
+colSums(is.na(test_final))
+colSums(is.na(test_final))>0
+colnames(test_final)[colSums(is.na(test_final))>0] #nuevamente solo nos quedan NAs en "P5100" "P5130" "P5140", ya quedo bien
+
+
+
 #############################
+#2. Estadistica descriptiva general
+###############################
+
+
 
 
 
