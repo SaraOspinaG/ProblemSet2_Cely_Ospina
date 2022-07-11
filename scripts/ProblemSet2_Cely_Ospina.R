@@ -29,7 +29,8 @@ p_load(tidyverse,    #Para limpiar los datos
        stargazer,
        gtsummary,
        expss,
-       fastAdaboost) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
+       fastAdaboost,
+       randomForest) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
 
 predict<- stats::predict  #con esto soluciono el problema de que haya mas de una libreria con este comando
 
@@ -568,12 +569,6 @@ colSums(is.na(test_final))>0
 colnames(test_final)[colSums(is.na(test_final))>0] #nuevamente solo nos quedan NAs en "P5100" "P5130" "P5140", ya quedo bien
 
 
-
-#############################
-#2. Estadistica descriptiva general
-###############################
-
-
 ############################consideraciones variables explicativas ##########
 #SOBRE VARIABLE P5090
 #para poder sacar conclusiones sobre esta variable (tipo de posesion de la vivienda) hay que volverla dummys
@@ -588,18 +583,56 @@ colnames(test_final)[colSums(is.na(test_final))>0] #nuevamente solo nos quedan N
 #             6 Otra_posesion
 #")
 
-train_final <- train_final %>% mutate(propiedad= train_final$P5090)
 
-train_final<- train_final %>% mutate(dummy=1) %>%
-  spread(key=propiedad,value=dummy, fill=0) #notar que aqui aumenta el numero de variables
+#en train
+
+train_final <- train_final %>% 
+  mutate(viv_propia = if_else(train_final$P5090==1, 1, 0))
+
+train_final <- train_final %>% 
+  mutate(viv_propiapagando = if_else(train_final$P5090==2, 1, 0))
+
+train_final <- train_final %>% 
+  mutate(viv_arrendada = if_else(train_final$P5090==3, 1, 0))
+
+train_final <- train_final %>% 
+  mutate(viv_usufr = if_else(train_final$P5090==4, 1, 0))
+
+train_final <- train_final %>% 
+  mutate(viv_sintitulo = if_else(train_final$P5090==5, 1, 0))
+
+train_final <- train_final %>% 
+  mutate(viv_otra = if_else(train_final$P5090==6, 1, 0))
+
+#en test
+
+test_final <- test_final %>% 
+  mutate(viv_propia = if_else(test_final$P5090==1, 1, 0))
+
+test_final <- test_final %>% 
+  mutate(viv_propiapagando = if_else(test_final$P5090==2, 1, 0))
+
+test_final <- test_final %>% 
+  mutate(viv_arrendada = if_else(test_final$P5090==3, 1, 0))
+
+test_final <- test_final %>% 
+  mutate(viv_usufr = if_else(test_final$P5090==4, 1, 0))
+
+test_final <- test_final %>% 
+  mutate(viv_sintitulo = if_else(test_final$P5090==5, 1, 0))
+
+test_final <- test_final %>% 
+  mutate(viv_otra = if_else(test_final$P5090==6, 1, 0))
 
 
-#lo mismo lo voy a hacer con la de educacion
+
+
+#lo mismo lo voy a hacer con la de educacion #P6210
 #la cosa es que educacion trae nombres rarisimos entonces creo que la voy a hacer a mano
 
-train_final <- train_final %>% mutate(educ= train_final$P6210)
 
-class(train_final$educ)
+
+
 colnames(train_final)
 #              "Ninguno"                     "Preescolar"                 
 #[40] "Básica primaria (1o - 5o)"   "Básica secundaria (6o - 9o)" "Media (10o - 13o)"          
@@ -625,6 +658,13 @@ train_final <- train_final %>%
 
 train_final <- train_final %>% 
   mutate(educ_ns_nr = if_else(train_final$P6210=="No sabe, no informa", 1, 0))
+
+
+
+
+#############################
+#2. Estadistica descriptiva general
+###############################
 
 
 #querremos mostrar las variables que nos interesan en TRAIN
@@ -797,6 +837,11 @@ testing<-other[-split2,]
 #EVALUATION:   10132 obs
 #TESTING:      20264 obs  #recordar que en este testing SI HAY la variable de pobres
 
+#comprobamos las proporciones de hogares pobres en cada muestra
+summary(training$hogarpobre) #19,3%
+summary(evaluation$hogarpobre) #18,3%
+summary(testing$hogarpobre) #19,0%    #podemos concluir que si estan semejantes
+
 #Por otro lado
 #TEST_FINAL:   60845 obs  #en esta es donde haremos la prueba final final no va mas
 
@@ -809,6 +854,7 @@ testing<-other[-split2,]
 
 
 ##Classification Models: (este es si pobre 1 o 0)#######################################
+
 
 #########################
 ###   AdaBoost   ########
@@ -832,27 +878,117 @@ intersect(names(training), names(test_final))
 
 class(training$Dominio) #factor
 
+#prueba con pocas explicativas para ver si corre bien el codigo##############
+  adaboost <- train(
+    hogar_es_pobre ~ mujer + viv_propia ,
+    data = training,
+    method = "adaboost",
+    trControl = ctrl,
+    family = "binomial",
+    metric = "Sens",
+    #preProcess = c("center", "scale")
+  )
+
+#predecimos
+pred_ada<-predict(adaboost,testing)
+
+#comparamos
+confusionMatrix(testing$hogar_es_pobre,pred_ada)
+
+##Reference
+#Prediction    Si    No
+#Si  2904   958
+#No 10124  6278
+
+#Accuracy : 0.4531        
+#95% CI : (0.4462, 0.46)
+#No Information Rate : 0.6429        
+#P-Value [Acc > NIR] : 1             
+
+#Kappa : 0.0706        
+
+#Mcnemar's Test P-Value : <2e-16        
+
+#            Sensitivity : 0.2229        
+#            Specificity : 0.8676        
+#         Pos Pred Value : 0.7519        
+#         Neg Pred Value : 0.3828        
+#             Prevalence : 0.6429        
+#         Detection Rate : 0.1433        
+#   Detection Prevalence : 0.1906        
+#      Balanced Accuracy : 0.5453        
+
+#       'Positive' Class : Si            
+
+
+
+
+#############################
+###   RandomForests   ########
+#############################
+
+#install.packages("randomForest")
+
+
+fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
+
+ctrl<- trainControl(method = "cv", 
+                    number = 5,
+                    summaryFunction = fiveStats,  
+                    classProbs = TRUE,
+                    verbose = FALSE,
+                    savePredictions = T)
+
 set.seed(123)
-adaboost <- training(
-  hogarpobre ~ P5000 + P5010 + amount+installment+age+ historygood + historypoor + purposeusedcar+ purposegoods.repair + purposeedu + foreigngerman + rentTR
-  data = train_hogares_total, #aqui poner la base final
-  method = "adaboost",
+
+forest <- train(
+  hogar_es_pobre ~ P5000 + P5010 + valor_arriendo + mujer + Oc + P6040 + P6090 + P7510s3 + P7510s5 + preescolar + primaria + secundaria + bachillerato_completo + superior + educ_ns_nr + viv_propia + viv_propiapagando + viv_arrendada + viv_usufr + viv_sintitulo ,
+  data = training,
+  method = "rf",
   trControl = ctrl,
   family = "binomial",
-  metric = "Sens",
-  #preProcess = c("center", "scale")
-)
+  metric="Sens",)
+
+  -#variable importance
+    
+    varImp(forest,scale=TRUE)
+  
+  #Predecir
+  pred_rf<-predict(forest,testing)
+  
+  #comparar
+  confusionMatrix(testing$Ingtotugarr,pred_rf)
+  
+  
+  
+  
+  
+  
+  ##prueba forests codigo complementario #######pendiente
+  
+  ctrl<- trainControl(method = "cv",
+                      number = 5,
+                      summaryFunction = fiveStats,
+                      classProbs = TRUE,
+                      verbose=FALSE,
+                      savePredictions = T)
+  
+  modelo1 <- decision_tree() %>%
+    set_engine("rpart") %>%
+    set_mode("classification")
+  
+  
+  
+  
+  ################################################
+  ###   Soluciones a desbalance de clases  ########
+  #################################################
+  
+  #como vimos, los hogares pobres son alrededor del 20% en las bases que tenemos, entonces vamos a hacer un remuestreo
+  
 
 
-adaboost <- train_final(
-  hogarpobre ~amount+installment+age+ historygood + historypoor + purposeusedcar+ purposegoods.repair + purposeedu + foreigngerman + rentTR
-  data = train_hogares_total, #aqui poner la base final
-  method = "adaboost",
-  trControl = ctrl,
-  family = "binomial",
-  metric = "Sens",
-  #preProcess = c("center", "scale")
-)
+
 
 
 
