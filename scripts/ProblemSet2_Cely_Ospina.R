@@ -887,16 +887,7 @@ summary(testing$hogarpobre) #19,0%    #podemos concluir que si estan semejantes
 
 ##Classification Models: (este es si pobre 1 o 0)#######################################
 
-#########################
-###   AdaBoost   ########
-#########################
-
-#install.packages("fastAdaboost")
-
-#en clasificacion nuestra variable Y es si es pobre o no es pobre
-
-#le voy a lanzar un monton de variables a ver cuales pone como importantes
-#sin embargo recordar que tienen que estar en test_final tambien
+# recordar que  las variablese¿ explicativas  escogidas tienen que estar en test_final tambien
 intersect(names(training), names(test_final))
 
 #[1] "id"                    "Clase"                 "Dominio"               "P5000"                 "P5010"                 "P5090"                 "P5100"                 "P5130"                
@@ -907,9 +898,21 @@ intersect(names(training), names(test_final))
 
 
 
-summary(training$hogarpobre) #19% pobres
 
-class(training$Dominio) #factor
+
+#########################
+###   AdaBoost   ########
+#########################
+
+#install.packages("fastAdaboost")
+
+#en clasificacion nuestra variable Y es si es pobre o no es pobre
+
+#le voy a lanzar un monton de variables a ver cuales pone como importantes
+
+
+
+summary(training$hogarpobre) #19% pobres
 
 
 fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
@@ -921,12 +924,60 @@ ctrl<- trainControl(method = "cv",
                     verbose = FALSE,
                     savePredictions = T)
 
+
+summary(training$hogarpobre)
+summary(training$hogar_es_pobre)
+
 #semilla
 set.seed(123)
 
+#prueba con pocas explicativas para ver si corre bien el codigo
+adaboost <- train(
+  hogar_es_pobre ~ mujer + viv_propia ,
+  data = training,
+  method = "adaboost",
+  trControl = ctrl,
+  family = "binomial",
+  metric = "Sens",
+  #preProcess = c("center", "scale")
+)
+
+#predecimos
+pred_ada<-predict(adaboost,testing)
+
+#comparamos
+confusionMatrix(testing$hogar_es_pobre,pred_ada)
+
+##Reference
+#Prediction    Si    No
+#Si  2904   958
+#No 10124  6278
+
+#Accuracy : 0.4531        
+#95% CI : (0.4462, 0.46)
+#No Information Rate : 0.6429        
+#P-Value [Acc > NIR] : 1             
+
+#Kappa : 0.0706        
+
+#Mcnemar's Test P-Value : <2e-16        
+                                        
+#            Sensitivity : 0.2229        
+#            Specificity : 0.8676        
+#         Pos Pred Value : 0.7519        
+#         Neg Pred Value : 0.3828        
+#             Prevalence : 0.6429        
+#         Detection Rate : 0.1433        
+#   Detection Prevalence : 0.1906        
+#      Balanced Accuracy : 0.5453        
+                                        
+#       'Positive' Class : Si            
+
+
+
 #corremos
 adaboost <- train(
-  hogarpobre ~ P5000 + P5010 + valor_arriendo + mujer + Oc + P6040 + P6090 + P7510s3 + P7510s5 + sin_educ + preescolar + primaria + secundaria + bachillerato_completo + superior + educ_ns_nr + viv_propia + viv_propiapagando + viv_arrendada + viv_usufr + viv_sintitulo + viv_otra ,  
+  hogar_es_pobre ~ P5000 + P5010 + valor_arriendo + mujer + Oc + P6040 + P6090 + P7510s3 + P7510s5 + sin_educ + preescolar + primaria + secundaria + bachillerato_completo + superior + educ_ns_nr + viv_propia + viv_propiapagando + viv_arrendada + viv_usufr + viv_sintitulo + viv_otra ,  
   data = training,
   method = "adaboost",
   trControl = ctrl,
@@ -940,9 +991,9 @@ adaboost <- train(
 pred_ada<-predict(adaboost,testing)
 
 #comparamos
-confusionMatrix(testing$hogarpobre,pred_ada)
+confusionMatrix(testing$hogar_es_pobre,pred_ada)
 
-
+varImp(adaboost,scale=TRUE)
 
 
 #############################
@@ -1012,6 +1063,15 @@ modelo1 <- decision_tree() %>%
 
 
 
+# up-sampling
+
+
+set.seed(123)
+upSampledTrain <- upSample(x = training,
+                           y = training$Default,
+                           ## keep the class variable name the same:
+                           yname = "Default")
+dim(training)
 
 
 
