@@ -40,8 +40,8 @@ predict<- stats::predict  #con esto soluciono el problema de que haya mas de una
 
 ##Establecer el directorio
 #setwd
-setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
-#setwd("C:/Users/Camila Cely/Documents/GitHub/ProblemSet2_Cely_Ospina")
+#setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
+setwd("C:/Users/Camila Cely/Documents/GitHub/ProblemSet2_Cely_Ospina")
 
 ##traer las bases de train y de test
 train_hogares<-readRDS("stores/train_hogares.Rds")
@@ -662,7 +662,7 @@ train_final <- train_final %>%
 
 
 #en test
--test_final <- test_final %>% 
+test_final <- test_final %>% 
   mutate(sin_educ = if_else(test_final$P6210=="Ninguno", 1, 0))
 
 test_final <- test_final %>% 
@@ -709,7 +709,7 @@ var_lab(train_final$P5010) = "Num total de cuartos donde se duerme"
 var_lab(train_final$Npersug) = "Num personas por unidad de gasto"
 var_lab(train_final$Ingtotug) = "Ingreso total unidad de gasto"
 var_lab(train_final$Ingtotugarr) = "Ingreso total unidad de gasto con imputacion de arriendo"
-var_lab(train_final$Ingtpcug) = "Ingreso per capita unidad de gasto con imputacion de arriendo"
+var_lab(train_final$Ingpcug) = "Ingreso per capita unidad de gasto con imputacion de arriendo"
 var_lab(train_final$Li) = "Linea indigencia"
 var_lab(train_final$Li) = "Linea pobreza"
 var_lab(train_final$Pobre) = "Hogar clasificado como pobre (1)"
@@ -873,7 +873,8 @@ summary(testing$hogarpobre) #19,0%    #podemos concluir que si estan semejantes
 #TEST_FINAL:   60845 obs  #en esta es donde haremos la prueba final final no va mas
 
 
-
+#######################################################################################
+#DE AQUI EN ADELANTE VIENEN LOS MODELOS PLANTEADOS
 
 ################################################################################################
 ##4. Modelos de Clasificación ###################################################################
