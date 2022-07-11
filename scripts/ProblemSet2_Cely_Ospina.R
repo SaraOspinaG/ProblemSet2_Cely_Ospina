@@ -630,6 +630,8 @@ test_final <- test_final %>%
 #lo mismo lo voy a hacer con la de educacion #P6210
 #la cosa es que educacion trae nombres rarisimos entonces creo que la voy a hacer a mano
 
+#En train
+train_final <- train_final %>% mutate(educ= train_final$P6210)
 
 
 colnames(train_final)
@@ -658,6 +660,28 @@ train_final <- train_final %>%
 train_final <- train_final %>% 
   mutate(educ_ns_nr = if_else(train_final$P6210=="No sabe, no informa", 1, 0))
 
+
+#en test
+-test_final <- test_final %>% 
+  mutate(sin_educ = if_else(test_final$P6210=="Ninguno", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(preescolar = if_else(test_final$P6210=="Preescolar", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(primaria = if_else(test_final$P6210=="Básica primaria (1o - 5o)", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(secundaria = if_else(test_final$P6210=="Básica secundaria (6o - 9o)", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(bachillerato_completo = if_else(test_final$P6210=="Media (10o - 13o)", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(superior = if_else(test_final$P6210=="Superior o universitaria", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(educ_ns_nr = if_else(test_final$P6210=="No sabe, no informa", 1, 0))
 
 
 
@@ -844,6 +868,7 @@ summary(training$hogarpobre) #19,3%
 summary(evaluation$hogarpobre) #18,3%
 summary(testing$hogarpobre) #19,0%    #podemos concluir que si estan semejantes
 
+
 #Por otro lado
 #TEST_FINAL:   60845 obs  #en esta es donde haremos la prueba final final no va mas
 
@@ -996,7 +1021,6 @@ forest <- train(
 
 #######Modelos Logit######
 
-
 #Logit con cross validation
 #Vamos a combinar las dos para tener todas las estadísticas, pero nos vamos a centrar en la sensibilidad: 
 fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
@@ -1011,7 +1035,7 @@ ctrl<- trainControl(method = "cv",
 #1.1
 set.seed(123)
 mylogit_caret <- train(
-  hogar_es_pobre ~ mujer + superior + P6040 + P5090 , 
+  hogar_es_pobre ~  mujer + superior + P6040, 
   data = training,
   method = "glm",
   trControl = ctrl,
@@ -1025,10 +1049,12 @@ mylogit_caret
 #Accuracy es VN+VP/VN+VP+FN+FP = tenemos 81% de efectividad, aleatorio daría parecido, no está tan bien
 #La sensibilidad está muy bajita comparado con el ejemplo que vimos en clase 
 
+
+
 #1.2
 set.seed(123)
 mylogit_caret2 <- train(
-  hogar_es_pobre ~ mujer + superior + P6040 + P5090 + valor_arriendo + viv_propia , 
+  hogar_es_pobre ~ viv_propia + mujer + superior + P6040 + P5090 + valor_arriendo , 
   data = training,
   method = "glm",
   trControl = ctrl,
@@ -1045,7 +1071,7 @@ mylogit_caret2
 #1.3
 set.seed(123)
 mylogit_caret3 <- train(
-  hogar_es_pobre ~ mujer + superior + P6040 + P5090 + valor_arriendo + P7510s3 + P7510s5 , 
+  hogar_es_pobre ~viv_propia + mujer + superior + P6040 + P5090 + valor_arriendo + P7510s3 + P7510s5, 
   data = training,
   method = "glm",
   trControl = ctrl,
