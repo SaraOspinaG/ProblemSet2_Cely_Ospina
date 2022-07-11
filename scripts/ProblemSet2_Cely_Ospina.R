@@ -29,7 +29,8 @@ p_load(tidyverse,    #Para limpiar los datos
        stargazer,
        gtsummary,
        expss,
-       fastAdaboost) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
+       fastAdaboost,
+       randomForest) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
 
 predict<- stats::predict  #con esto soluciono el problema de que haya mas de una libreria con este comando
 
@@ -597,6 +598,7 @@ train_final<- train_final %>% mutate(dummy=1) %>%
 #lo mismo lo voy a hacer con la de educacion
 #la cosa es que educacion trae nombres rarisimos entonces creo que la voy a hacer a mano
 
+#En train
 train_final <- train_final %>% mutate(educ= train_final$P6210)
 
 class(train_final$educ)
@@ -626,6 +628,28 @@ train_final <- train_final %>%
 train_final <- train_final %>% 
   mutate(educ_ns_nr = if_else(train_final$P6210=="No sabe, no informa", 1, 0))
 
+
+#en test
+-test_final <- test_final %>% 
+  mutate(sin_educ = if_else(test_final$P6210=="Ninguno", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(preescolar = if_else(test_final$P6210=="Preescolar", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(primaria = if_else(test_final$P6210=="Básica primaria (1o - 5o)", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(secundaria = if_else(test_final$P6210=="Básica secundaria (6o - 9o)", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(bachillerato_completo = if_else(test_final$P6210=="Media (10o - 13o)", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(superior = if_else(test_final$P6210=="Superior o universitaria", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(educ_ns_nr = if_else(test_final$P6210=="No sabe, no informa", 1, 0))
 
 #querremos mostrar las variables que nos interesan en TRAIN
 #como ya no tenemos hogares y personas por separado, sacamos este analisis en las bases final
@@ -796,6 +820,12 @@ testing<-other[-split2,]
 #TRAINING:    121586 obs
 #EVALUATION:   10132 obs
 #TESTING:      20264 obs  #recordar que en este testing SI HAY la variable de pobres
+
+#comprobamos las proporciones de hogares pobres en cada muestra
+summary(training$hogarpobre) #19,3%
+summary(evaluation$hogarpobre) #18,3%
+summary(testing$hogarpobre) #19,0%    #podemos concluir que si estan semejantes
+
 
 #Por otro lado
 #TEST_FINAL:   60845 obs  #en esta es donde haremos la prueba final final no va mas
