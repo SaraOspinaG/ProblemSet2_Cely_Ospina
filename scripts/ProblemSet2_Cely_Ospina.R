@@ -1233,6 +1233,7 @@ with (evalResults,table(hogar_es_pobre,hat_def_rfThresh))
 ##5. Regresiones
 #Ingreso
 
+###hago algo, guardo y hago commit   
 
 
 
