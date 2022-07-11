@@ -887,6 +887,104 @@ summary(testing$hogarpobre) #19,0%    #podemos concluir que si estan semejantes
 ##Classification Models: (este es si pobre 1 o 0)#######################################
 #en clasificacion nuestra variable Y es si es pobre o no es pobre
 
+
+#############################
+###   RandomForests   ########
+#############################
+
+#OBJETIVO= meter muchas variables y que nos indique cuales son las mejores
+
+#install.packages("randomForest")
+
+
+fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
+
+ctrl<- trainControl(method = "cv", 
+                    number = 5,
+                    summaryFunction = fiveStats,  
+                    classProbs = TRUE,
+                    verbose = FALSE,
+                    savePredictions = T)
+
+set.seed(123)
+
+forest <- train(
+  hogar_es_pobre ~ P5000 + P5010 + valor_arriendo + mujer + Oc + P6040 + P6090 + P7510s3 + P7510s5 + preescolar + primaria + secundaria + bachillerato_completo + superior + educ_ns_nr + viv_propia + viv_propiapagando + viv_arrendada + viv_usufr + viv_sintitulo ,
+  data = training,
+  method = "rf",
+  trControl = ctrl,
+  family = "binomial",
+  metric="Sens",)
+
+#como esto se demoro literal dos horas corriendo, voy a guardar una copia hasta aca
+save(forest, file = "C:/Users/Camila Cely/Documents/GitHub/ProblemSet2_Cely_Ospina/stores/forest.Rdata")
+save.image()
+
+#variable importance 
+varImp(forest,scale=TRUE)
+####################################IMPORTANTE= ESTA ES LA PRIMERA SALIDA QUE NOS INDICA LAS MEJORES VARIABLES QUE PREDICEN POBREZA
+
+#P6040                 100.00000   #Edad del jefe de hogar   
+#valor_arriendo         72.28647   #cuanto pagan de arriendo
+#P5000                  28.00644   #cuantos cuartos tienen
+#P5010                  18.04168   #en cuantos cuartos duermen
+#mujer                  14.78857   #si el jefe de hogar es mujer #de acuerdo con nuestra intuicion y con las estad descr
+#primaria                9.16831   #si el jefe de hogar tiene nivel educativo muy bajo
+#Oc                      8.04550   #si el jefe de hogar esta empleado
+#P6090                   7.10394   #si el jefe de hogar esta afiliado a salud
+#secundaria              7.00427   # (educ)
+#P7510s3                 6.24572   #si el jefe de hogar recibe ayudas del gobierno
+#bachillerato_completo   6.18634   # (educ)
+#superior                5.84915   # (educ)                       #notar que salen en orden
+#viv_arrendada           5.67787   #si la vivienda es arrendada
+#viv_propia              4.76958   #si la vivienda es propia     ## ver cual de las dos usar, diria que arrendada
+#viv_sintitulo           4.68723
+#viv_usufr               4.43618
+#viv_propiapagando       1.30497
+#P7510s5                 0.44975   #vemos que la de recibir dinero de productos financieros no ayuda mucho
+#preescolar              0.01527   #estas dos ultimas no sirven de mucho porque hay demasiado pocas observaciones
+#educ_ns_nr              0.00000
+
+#Predecir
+pred_rf<-predict(forest,testing)
+
+#comparar
+confusionMatrix(testing$hogar_es_pobre,pred_rf)
+
+#Confusion Matrix and Statistics
+
+#Reference
+#Prediction    Si    No
+#Si  1330  2532
+#No  1756 14646  #notar que predice como pobres a muchisimos no-pobres
+
+#Accuracy : 0.7884         
+#95% CI : (0.7827, 0.794)
+#No Information Rate : 0.8477         
+#P-Value [Acc > NIR] : 1              
+
+#Kappa : 0.2571         
+
+#Mcnemar's Test P-Value : <2e-16         
+
+#           Sensitivity : 0.43098       #hace relativamente buen trabajo 
+#           Specificity : 0.85260        
+#        Pos Pred Value : 0.34438        
+#        Neg Pred Value : 0.89294        
+#            Prevalence : 0.15229        
+#        Detection Rate : 0.06563        
+#  Detection Prevalence : 0.19058        
+#     Balanced Accuracy : 0.64179        
+
+#     'Positive' Class : Si          
+
+
+
+
+
+
+
+
 #########################
 ###   AdaBoost   ########
 #########################
@@ -950,43 +1048,8 @@ confusionMatrix(testing$hogar_es_pobre,pred_ada)
 
 
 
-#############################
-###   RandomForests   ########
-#############################
-
-#install.packages("randomForest")
 
 
-fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
-
-ctrl<- trainControl(method = "cv", 
-                    number = 5,
-                    summaryFunction = fiveStats,  
-                    classProbs = TRUE,
-                    verbose = FALSE,
-                    savePredictions = T)
-
-set.seed(123)
-
-forest <- train(
-  hogar_es_pobre ~ P5000 + P5010 + valor_arriendo + mujer + Oc + P6040 + P6090 + P7510s3 + P7510s5 + preescolar + primaria + secundaria + bachillerato_completo + superior + educ_ns_nr + viv_propia + viv_propiapagando + viv_arrendada + viv_usufr + viv_sintitulo ,
-  data = training,
-  method = "rf",
-  trControl = ctrl,
-  family = "binomial",
-  metric="Sens",)
-
-  -#variable importance
-    
-    varImp(forest,scale=TRUE)
-  
-  #Predecir
-  pred_rf<-predict(forest,testing)
-  
-  #comparar
-  confusionMatrix(testing$Ingtotugarr,pred_rf)
-  
-  
   
   
   
