@@ -345,7 +345,7 @@ train_personas <- train_personas %>%
 
 summary(train_personas$jefe_hogar) #30% de los encuestados son jefes de hogar #ademas= todos los hogares de la muestra tienen jefe de hogar
 
-train_personas_f<- train_personas #duplico para poder sacar una submuestra de personas que solo incluya a los jefes de hogar
+train_personas_f<- train_personas #duplico para poder sacar una submuestra de personas que solo incluya a los jefes de hogar#############################################
 
 train_personas_f <- train_personas_f %>% subset(jefe_hogar == 1) #aqui saque base con solo jefes de hogar
 
@@ -508,7 +508,7 @@ summary(train_hogares_f)
 train_hogares_personas <- left_join(train_hogares_f, Personas)
 summary(train_hogares_personas) 
 
-train_final <- train_hogares_personas %>% drop_na(c("mujer", "Oc", "P6210")) #374 NAs que se generan realizando el cruce
+train_final <- train_hogares_personas %>% drop_na(c("mujer", "Oc", "P6210")) #374 NAs que se generan realizando el cruce   ###########AQUI CREAMOS TRAIN_FINAL
 summary(train_final) 
 
 #vemos en cuales variables de train_final hay NAs
@@ -548,7 +548,7 @@ summary(test_personas_f)
 test_hogares_personas <- left_join(test_hogares_f, PersonasT)
 summary(test_hogares_personas) 
 
-test_final <- test_hogares_personas %>% drop_na(c("mujer", "Oc", "P6210")) #se generan 156 missings en el cruce
+test_final <- test_hogares_personas %>% drop_na(c("mujer", "Oc", "P6210")) #se generan 156 missings en el cruce   ##############AQUI CREAMOS TEST_FINAL
 
 #Ajustar si recibió subsidios en test
 test_final <- test_final %>% 
@@ -629,7 +629,6 @@ test_final <- test_final %>%
 
 #lo mismo lo voy a hacer con la de educacion #P6210
 #la cosa es que educacion trae nombres rarisimos entonces creo que la voy a hacer a mano
-
 
 
 
@@ -758,6 +757,7 @@ table_compare
 #3rd Qu.:0.0000   3rd Qu.:0.0000  
 #Max.   :1.0000   Max.   :1.0000  
 
+
 ### ####### ####### #######
 #por ultimo voy a hacer exactamente lo mismo pero en test_final
 ###### ######## ####### ######
@@ -816,8 +816,10 @@ hist(test_final$valor_arriendo) #dan parecidos
 train_final <- train_final %>% mutate(hogar_es_pobre= train_final$hogarpobre)
 train_final <- train_final %>% mutate(hogar_es_pobre=factor(hogar_es_pobre, levels=c(1,0), labels=c("Si", "No")))
 
+#################################################################################
+#3. Dividir las muestras #######################################################
+#################################################################################
 
-#3. Dividir
 ##Primero partimos la base de entrenamiento, se parte en 80% - 20% por ser la forma en la que se comporta la variable de pobreza 
 set.seed(123)
 split1<-createDataPartition(train_final$hogarpobre, p = .8)[[1]]
@@ -845,27 +847,25 @@ summary(testing$hogarpobre) #19,0%    #podemos concluir que si estan semejantes
 #Por otro lado
 #TEST_FINAL:   60845 obs  #en esta es donde haremos la prueba final final no va mas
 
+
+
+
 ################################################################################################
-##4. Modelos de Clasificación
-#Pobre
+##4. Modelos de Clasificación ###################################################################
+################################################################################################
+
 
 ###################
 ##Predecir pobreza
 
-
 ##Classification Models: (este es si pobre 1 o 0)#######################################
-
+#en clasificacion nuestra variable Y es si es pobre o no es pobre
 
 #########################
 ###   AdaBoost   ########
 #########################
 
 #install.packages("fastAdaboost")
-
-#en clasificacion nuestra variable Y es si es pobre o no es pobre
-
-summary(training$hogarpobre) #19% pobres
-
 
 #le voy a lanzar un monton de variables a ver cuales pone como importantes
 #sin embargo recordar que tienen que estar en test_final tambien
@@ -878,7 +878,7 @@ intersect(names(training), names(test_final))
 
 class(training$Dominio) #factor
 
-#prueba con pocas explicativas para ver si corre bien el codigo##############
+#prueba con pocas explicativas para ver si corre bien el codigo ##############
   adaboost <- train(
     hogar_es_pobre ~ mujer + viv_propia ,
     data = training,
