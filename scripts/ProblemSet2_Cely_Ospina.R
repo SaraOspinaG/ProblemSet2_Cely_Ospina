@@ -29,7 +29,8 @@ p_load(tidyverse,    #Para limpiar los datos
        stargazer,
        gtsummary,
        expss,
-       fastAdaboost) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
+       fastAdaboost,
+       randomForest) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
 
 predict<- stats::predict  #con esto soluciono el problema de que haya mas de una libreria con este comando
 
@@ -538,16 +539,19 @@ colnames(train_final)[colSums(is.na(train_final))>0] #ahora si nos salen solo la
 
 ############################
 #Unir Test
+#######################
 PersonasT <- select(filter(test_personas_f),c(id, mujer, Oc, P6210, P6040, P6090, P7510s3, P7510s5)) 
 summary(PersonasT)
 
 summary(test_personas_f)
+
 
 ####Base de Hogares + Personas con todas las variables
 test_hogares_personas <- left_join(test_hogares_f, PersonasT)
 summary(test_hogares_personas) 
 
 test_final <- test_hogares_personas %>% drop_na(c("mujer", "Oc", "P6210")) #se generan 156 missings en el cruce
+
 
 #Ajustar si recibió subsidios en test
 test_final <- test_final %>% 
@@ -568,13 +572,8 @@ colSums(is.na(test_final))>0
 colnames(test_final)[colSums(is.na(test_final))>0] #nuevamente solo nos quedan NAs en "P5100" "P5130" "P5140", ya quedo bien
 
 
+############################# Ahora unos ultimos ajustes de variables de interes ###################################
 
-#############################
-#2. Estadistica descriptiva general
-###############################
-
-
-############################consideraciones variables explicativas ##########
 #SOBRE VARIABLE P5090
 #para poder sacar conclusiones sobre esta variable (tipo de posesion de la vivienda) hay que volverla dummys
 
@@ -588,18 +587,53 @@ colnames(test_final)[colSums(is.na(test_final))>0] #nuevamente solo nos quedan N
 #             6 Otra_posesion
 #")
 
-train_final <- train_final %>% mutate(propiedad= train_final$P5090)
+#en train
 
-train_final<- train_final %>% mutate(dummy=1) %>%
-  spread(key=propiedad,value=dummy, fill=0) #notar que aqui aumenta el numero de variables
+train_final <- train_final %>% 
+  mutate(viv_propia = if_else(train_final$P5090==1, 1, 0))
+
+train_final <- train_final %>% 
+  mutate(viv_propiapagando = if_else(train_final$P5090==2, 1, 0))
+
+train_final <- train_final %>% 
+  mutate(viv_arrendada = if_else(train_final$P5090==3, 1, 0))
+
+train_final <- train_final %>% 
+  mutate(viv_usufr = if_else(train_final$P5090==4, 1, 0))
+
+train_final <- train_final %>% 
+  mutate(viv_sintitulo = if_else(train_final$P5090==5, 1, 0))
+
+train_final <- train_final %>% 
+  mutate(viv_otra = if_else(train_final$P5090==6, 1, 0))
+
+#en test
+
+test_final <- test_final %>% 
+  mutate(viv_propia = if_else(test_final$P5090==1, 1, 0))
+
+test_final <- test_final %>% 
+  mutate(viv_propiapagando = if_else(test_final$P5090==2, 1, 0))
+
+test_final <- test_final %>% 
+  mutate(viv_arrendada = if_else(test_final$P5090==3, 1, 0))
+
+test_final <- test_final %>% 
+  mutate(viv_usufr = if_else(test_final$P5090==4, 1, 0))
+
+test_final <- test_final %>% 
+  mutate(viv_sintitulo = if_else(test_final$P5090==5, 1, 0))
+
+test_final <- test_final %>% 
+  mutate(viv_otra = if_else(test_final$P5090==6, 1, 0))
 
 
-#lo mismo lo voy a hacer con la de educacion
+#lo mismo lo voy a hacer con la de educacion #P6210
 #la cosa es que educacion trae nombres rarisimos entonces creo que la voy a hacer a mano
 
-train_final <- train_final %>% mutate(educ= train_final$P6210)
 
-class(train_final$educ)
+#en train
+
 colnames(train_final)
 #              "Ninguno"                     "Preescolar"                 
 #[40] "Básica primaria (1o - 5o)"   "Básica secundaria (6o - 9o)" "Media (10o - 13o)"          
@@ -627,19 +661,52 @@ train_final <- train_final %>%
   mutate(educ_ns_nr = if_else(train_final$P6210=="No sabe, no informa", 1, 0))
 
 
+#en test
+
+test_final <- test_final %>% 
+  mutate(sin_educ = if_else(test_final$P6210=="Ninguno", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(preescolar = if_else(test_final$P6210=="Preescolar", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(primaria = if_else(test_final$P6210=="Básica primaria (1o - 5o)", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(secundaria = if_else(test_final$P6210=="Básica secundaria (6o - 9o)", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(bachillerato_completo = if_else(test_final$P6210=="Media (10o - 13o)", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(superior = if_else(test_final$P6210=="Superior o universitaria", 1, 0))
+
+test_final <- test_final %>% 
+  mutate(educ_ns_nr = if_else(test_final$P6210=="No sabe, no informa", 1, 0))
+
+
+
+
+#############################
+#2. Estadistica descriptiva general
+###############################
+
+
+############################consideraciones variables explicativas ##########
+
+
 #querremos mostrar las variables que nos interesan en TRAIN
 #como ya no tenemos hogares y personas por separado, sacamos este analisis en las bases final
 
 
 colnames(train_final)
 
-#[1] "id"             "Clase"          "Dominio"        "P5000"          "P5010"          "P5090"         
-#[7] "P5100"          "P5130"          "P5140"          "Nper"           "Npersug"        "Ingtotug"      
-#[13] "Ingtotugarr"    "Ingpcug"        "Li"             "Lp"             "Pobre"          "Indigente"     
-#[19] "Npobres"        "Nindigentes"    "Fex_c"          "Depto"          "Fex_dpto"       "valor_arriendo"
-#[25] "mujer"          "Oc"             "P6210"          "P6040"          "P6090"          "P7510s3"       
-#[31] "P7510s5"     
-
+#[1] "id"                    "Clase"                 "Dominio"               "P5000"                 "P5010"                 "P5090"                 "P5100"                 "P5130"                
+#[9] "P5140"                 "Nper"                  "Npersug"               "Ingtotug"              "Ingtotugarr"           "Ingpcug"               "Li"                    "Lp"                   
+#[17] "Pobre"                 "Indigente"             "Npobres"               "Nindigentes"           "Fex_c"                 "Depto"                 "Fex_dpto"              "valor_arriendo"       
+#[25] "mujer"                 "Oc"                    "P6210"                 "P6040"                 "P6090"                 "P7510s3"               "P7510s5"               "Propia"               
+#[33] "Propia_pagando"        "Arriendo"              "Usufructo"             "Posesion_sin_titulo"   "Otra_posesion"         "sin_educ"              "preescolar"            "primaria"             
+#[41] "secundaria"            "bachillerato_completo" "superior"              "educ_ns_nr"       
 
 var_lab(train_final$P5000) = "Num total de cuartos"
 var_lab(train_final$P5010) = "Num total de cuartos donde se duerme"
@@ -661,7 +728,7 @@ var_lab(train_final$P6090) = "Entidad salud jefe de hogar (1=si)"
 var_lab(train_final$P7510s3) = "Jefe de hogar recibe ayudas institucionales"
 var_lab(train_final$P7510s5) = "Jefe de hogar recibe dinero de productos financieros"
 
-dim(train_final) #151982     31
+dim(train_final) #151982     44
 
 #paquete gtsummary
 #The default output from tbl_summary() is meant to be publication ready.
@@ -723,10 +790,14 @@ table_compare
 ###### ######## ####### ######
 
 colnames(test_final)
-# "id"             "Clase"          "Dominio"        "P5000"          "P5010"          "P5090"         
-#[7] "P5100"          "P5130"          "P5140"          "Nper"           "Npersug"        "Li"            
-#[13] "Lp"             "Fex_c"          "Depto"          "Fex_dpto"       "valor_arriendo" "mujer"         
-#[19] "Oc"             "P6210"          "P6040"          "P6090"          "P7510s3"        "P7510s5" 
+#[1] "id"                             "Clase"                          "Dominio"                        "P5000"                          "P5010"                         
+#[6] "P5090"                          "P5100"                          "P5130"                          "P5140"                          "Nper"                          
+#[11] "Npersug"                        "Li"                             "Lp"                             "Fex_c"                          "Depto"                         
+#[16] "Fex_dpto"                       "valor_arriendo"                 "mujer"                          "Oc"                             "P6210"                         
+#[21] "P6040"                          "P6090"                          "P7510s3"                        "P7510s5"                        "Propia, totalmente pagada"     
+#[26] "Propia, la están pagando"       "En arriendo o subarriendo"      "En usufructo"                   "Posesión sin titulo (ocupante)" "Otra"                          
+#[31] "sin_educ"                       "preescolar"                     "primaria"                       "secundaria"                     "bachillerato_completo"         
+#[36] "superior"                       "educ_ns_nr"                    
 
 ##NOTAR que en test no esta la variable de Ingtotugarr, entonces hay que aprender a predecirla con lo que tenemos
     
@@ -754,7 +825,7 @@ var_lab(test_final$P6090) = "Entidad salud jefe de hogar (1=si)"
 var_lab(test_final$P7510s3) = "Jefe de hogar recibe ayudas institucionales"
 var_lab(test_final$P7510s5) = "Jefe de hogar recibe dinero de productos financieros"
 
-dim(test_final) #60845    24
+dim(test_final) #60845    37
 
 #no hago el analisis de hogares pobres precisamente porque en esta base no los tenemos
 
@@ -797,8 +868,14 @@ testing<-other[-split2,]
 #EVALUATION:   10132 obs
 #TESTING:      20264 obs  #recordar que en este testing SI HAY la variable de pobres
 
+#comprobamos las proporciones de hogares pobres en cada muestra
+summary(training$hogarpobre) #19,3%
+summary(evaluation$hogarpobre) #18,3%
+summary(testing$hogarpobre) #19,0%    #podemos concluir que si estan semejantes
+
 #Por otro lado
 #TEST_FINAL:   60845 obs  #en esta es donde haremos la prueba final final no va mas
+
 
 ################################################################################################
 ##4. Modelos de Clasificación
@@ -818,24 +895,39 @@ testing<-other[-split2,]
 
 #en clasificacion nuestra variable Y es si es pobre o no es pobre
 
-summary(training$hogarpobre) #19% pobres
-
-
 #le voy a lanzar un monton de variables a ver cuales pone como importantes
 #sin embargo recordar que tienen que estar en test_final tambien
 intersect(names(training), names(test_final))
 
-#[1] "id"             "Clase"          "Dominio"        "P5000"          "P5010"          "P5090"         
-#[7] "P5100"          "P5130"          "P5140"          "Nper"           "Npersug"        "Li"            
-#[13] "Lp"             "Fex_c"          "Depto"          "Fex_dpto"       "valor_arriendo" "mujer"         
-#[19] "Oc"             "P6210"          "P6040"          "P6090"          "P7510s3"        "P7510s5"
+#[1] "id"                    "Clase"                 "Dominio"               "P5000"                 "P5010"                 "P5090"                 "P5100"                 "P5130"                
+#[9] "P5140"                 "Nper"                  "Npersug"               "Li"                    "Lp"                    "Fex_c"                 "Depto"                 "Fex_dpto"             
+#[17] "valor_arriendo"        "mujer"                 "Oc"                    "P6210"                 "P6040"                 "P6090"                 "P7510s3"               "P7510s5"              
+#[25] "viv_propia"            "viv_propiapagando"     "viv_arrendada"         "viv_usufr"             "viv_sintitulo"         "viv_otra"              "sin_educ"              "preescolar"           
+#[33] "primaria"              "secundaria"            "bachillerato_completo" "superior"              "educ_ns_nr"           
+
+
+
+summary(training$hogarpobre) #19% pobres
 
 class(training$Dominio) #factor
 
+
+fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
+
+ctrl<- trainControl(method = "cv", 
+                    number = 5,
+                    summaryFunction = fiveStats,  
+                    classProbs = TRUE,
+                    verbose = FALSE,
+                    savePredictions = T)
+
+#semilla
 set.seed(123)
-adaboost <- training(
-  hogarpobre ~ P5000 + P5010 + amount+installment+age+ historygood + historypoor + purposeusedcar+ purposegoods.repair + purposeedu + foreigngerman + rentTR
-  data = train_hogares_total, #aqui poner la base final
+
+#corremos
+adaboost <- train(
+  hogarpobre ~ P5000 + P5010 + valor_arriendo + mujer + Oc + P6040 + P6090 + P7510s3 + P7510s5 + sin_educ + preescolar + primaria + secundaria + bachillerato_completo + superior + educ_ns_nr + viv_propia + viv_propiapagando + viv_arrendada + viv_usufr + viv_sintitulo + viv_otra ,  
+  data = training,
   method = "adaboost",
   trControl = ctrl,
   family = "binomial",
@@ -844,15 +936,88 @@ adaboost <- training(
 )
 
 
-adaboost <- train_final(
-  hogarpobre ~amount+installment+age+ historygood + historypoor + purposeusedcar+ purposegoods.repair + purposeedu + foreigngerman + rentTR
-  data = train_hogares_total, #aqui poner la base final
-  method = "adaboost",
+#predecimos
+pred_ada<-predict(adaboost,testing)
+
+#comparamos
+confusionMatrix(testing$hogarpobre,pred_ada)
+
+
+
+
+#############################
+###   RandomForests   ########
+#############################
+
+#install.packages("randomForest")
+
+
+fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
+
+ctrl<- trainControl(method = "cv", 
+                    number = 5,
+                    summaryFunction = fiveStats,  
+                    classProbs = TRUE,
+                    verbose = FALSE,
+                    savePredictions = T)
+
+set.seed(123)
+
+forest <- train(
+  hogar_es_pobre ~ P5000 + P5010 + valor_arriendo + mujer + Oc + P6040 + P6090 + P7510s3 + P7510s5 + preescolar + primaria + secundaria + bachillerato_completo + superior + educ_ns_nr + viv_propia + viv_propiapagando + viv_arrendada + viv_usufr + viv_sintitulo ,
+  data = training,
+  method = "rf",
   trControl = ctrl,
   family = "binomial",
-  metric = "Sens",
+  metric="Sens",
   #preProcess = c("center", "scale")
 )
+
+#variable importance
+
+varImp(forest,scale=TRUE)
+
+#Predecir
+pred_rf<-predict(forest,testing)
+
+#comparar
+confusionMatrix(testing$Ingtotugarr,pred_rf)
+
+
+
+
+
+
+##prueba forests codigo complementario #######pendiente
+
+ctrl<- trainControl(method = "cv",
+                    number = 5,
+                    summaryFunction = fiveStats,
+                    classProbs = TRUE,
+                    verbose=FALSE,
+                    savePredictions = T)
+
+modelo1 <- decision_tree() %>%
+  set_engine("rpart") %>%
+  set_mode("classification")
+
+
+
+
+################################################
+###   Soluciones a desbalance de clases  ########
+#################################################
+
+#como vimos, los hogares pobres son alrededor del 20% en las bases que tenemos, entonces vamos a hacer un remuestreo
+
+
+
+
+
+
+
+
+
 
 
 
