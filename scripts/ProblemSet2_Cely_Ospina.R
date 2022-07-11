@@ -959,15 +959,6 @@ mylogit_lasso_roc
 #The final values used for the model were alpha = 0 and lambda = 0.009654893.
 
 
-result_logitcv <- logit_caret_pob[["results"]]
-colnames(result_logitcv)[1]<-"lambda"
-result_lassoacc <- logit_lasso[["results"]][54,-1]
-result_lassoroc<- logit_lasso_ROC[["results"]][54,-1]
-result_lassosens<- logit_lasso_sens[["results"]][100,-1]
-results<-rbind(result_logitcv,result_lassoacc,result_lassoroc, result_lassosens)
-
-results<-rbind(mylogit_caret,mylogit_enet_sens,mylogit_lasso_sens, mylogit_lasso_roc)
-
 
 
 ######Logit con Lasso y cambio en cutoff
