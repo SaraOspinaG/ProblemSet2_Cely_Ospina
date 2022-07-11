@@ -1021,7 +1021,6 @@ forest <- train(
 
 #######Modelos Logit######
 
-
 #Logit con cross validation
 #Vamos a combinar las dos para tener todas las estadísticas, pero nos vamos a centrar en la sensibilidad: 
 fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
@@ -1036,7 +1035,7 @@ ctrl<- trainControl(method = "cv",
 #1.1
 set.seed(123)
 mylogit_caret <- train(
-  hogar_es_pobre ~ mujer + superior + P6040 + P5090 , 
+  hogar_es_pobre ~  mujer + superior + P6040, 
   data = training,
   method = "glm",
   trControl = ctrl,
@@ -1050,10 +1049,12 @@ mylogit_caret
 #Accuracy es VN+VP/VN+VP+FN+FP = tenemos 81% de efectividad, aleatorio daría parecido, no está tan bien
 #La sensibilidad está muy bajita comparado con el ejemplo que vimos en clase 
 
+
+
 #1.2
 set.seed(123)
 mylogit_caret2 <- train(
-  hogar_es_pobre ~ mujer + superior + P6040 + P5090 + valor_arriendo + viv_propia , 
+  hogar_es_pobre ~ viv_propia + mujer + superior + P6040 + P5090 + valor_arriendo , 
   data = training,
   method = "glm",
   trControl = ctrl,
@@ -1070,7 +1071,7 @@ mylogit_caret2
 #1.3
 set.seed(123)
 mylogit_caret3 <- train(
-  hogar_es_pobre ~ mujer + superior + P6040 + P5090 + valor_arriendo + P7510s3 + P7510s5 , 
+  hogar_es_pobre ~viv_propia + mujer + superior + P6040 + P5090 + valor_arriendo + P7510s3 + P7510s5, 
   data = training,
   method = "glm",
   trControl = ctrl,
