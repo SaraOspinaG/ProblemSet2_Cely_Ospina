@@ -904,7 +904,8 @@ intersect(names(training), names(test_final))
 class(training$Dominio) #factor
 
 #prueba con pocas explicativas para ver si corre bien el codigo ##############
-  adaboost <- train(
+
+adaboost <- train(
     hogar_es_pobre ~ mujer + viv_propia ,
     data = training,
     method = "adaboost",
@@ -1005,9 +1006,9 @@ forest <- train(
   
   
   
-  ################################################
-  ###   Soluciones a desbalance de clases  ########
-  #################################################
+################################################
+###   Soluciones a desbalance de clases  ########
+#################################################
   
   #como vimos, los hogares pobres son alrededor del 20% en las bases que tenemos, entonces vamos a hacer un remuestreo
   
