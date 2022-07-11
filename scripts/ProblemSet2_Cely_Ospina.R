@@ -858,73 +858,152 @@ adaboost <- train_final(
 
 
 
-#######Logit Simple######
+#######Modelos Logit######
 
 
+#Logit con cross validation
+#Vamos a combinar las dos para tener todas las estadísticas, pero nos vamos a centrar en la sensibilidad: 
+fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
+ctrl<- trainControl(method = "cv", 
+                    number = 5,
+                    summaryFunction = fiveStats,  
+                    classProbs = TRUE,
+                    verbose = FALSE,
+                    savePredictions = T)
 
-summary(training)
-help(trainControl)
-
-ctrl_def<- trainControl(method = "cv", 
-                        number = 5,
-                        summaryFunction = defaultSummary,  
-                        classProbs = TRUE,
-                        verbose = FALSE,
-                        savePredictions = T)
-
+#Uso siempre la misma semilla para que sea comparable
 set.seed(123)
-mylogit_caret_def <- train(
-  hogar_es_pobre ~ valor_arriendo+mujer+factor(mujer) +factor (P6210) + P6040 + valor_arriendo, 
+mylogit_caret <- train(
+  hogar_es_pobre ~ valor_arriendo+mujer +superior + P6040, 
   data = training,
   method = "glm",
-  trControl = ctrl_def,
+  trControl = ctrl,
   family = "binomial",
   preProcess = c("center", "scale")
 )
-mylogit_caret_def
+mylogit_caret
 
-#Revisar si se hace con el twoClassSummary y el FiveStats
+#  ROC        Sens        Spec       Accuracy   Kappa     
+#0.7548222  0.07774788  0.9869299  0.8112118  0.09651472
+#Accuracy es VN+VP/VN+VP+FN+FP = tenemos 81% de efectividad, aleatorio daría parecido, no está tan bien
+#La sensibilidad está muy bajita comparado con el ejemplo que vimos en clase 
 
-#Logit con Lasso
-
-lambda_grid <- 10^seq(-4, 0.01, lenght = 200)
+##########Logit con Elastic Net - sensibility
+lambda_grid <- 10^seq(-4, 0.01, length = 100)
 lambda_grid
 
 set.seed(123)
-mylogit_lasso_acc <- train(
-  Default~amount+installment+age+....,    
+mylogit_enet_sens <- train(
+  hogar_es_pobre ~ valor_arriendo+mujer +superior + P6040 + P6090 + P7510s3 + P7510s5, 
   data = training,
   method = "glmnet",
   trControl = ctrl,
-  family = "Sens",
+  family = "binomial",
+  metric = "Sens",
+  tuneGrid = ,
+  preProcess = c("center", "scale")
+)
+
+help(train)
+
+mylogit_enet_sens
+#Sens was used to select the optimal model using the largest value.
+#The final values used for the model were alpha = 0.55 and lambda = 0.0002121025.
+#  alpha  lambda        ROC        Sens         Spec       Accuracy   Kappa     
+#0.10   0.0002121025  0.7631357  0.110345370  0.9814348  0.8130788  0.13278064
+#Podemos ver que la sensibilidad mejora considerablemente
+
+
+##########Logit con Lasso - sensibility
+
+install.packages("glmnet")
+
+lambda_grid <- 10^seq(-4, 0.01, length = 100)
+lambda_grid
+
+set.seed(123)
+mylogit_lasso_sens <- train(
+  hogar_es_pobre ~ valor_arriendo+mujer +superior + P6040 + P6090 + P7510s3 + P7510s5, 
+  data = training,
+  method = "glmnet",
+  trControl = ctrl,
+  family = "binomial",
+  metric = "Sens",
   tuneGrid = expand.grid(alpha = 0, lambda=lambda_grid),
   preProcess = c("center", "scale")
 )
 
-mylogit_lasso_acc
+mylogit_lasso_sens
+#Tuning parameter 'alpha' was held constant at a value of 0
+#Sens was used to select the optimal model using the largest value.
+#The final values used for the model were alpha = 0 and lambda = 0.0105987.
+#Sensibility = 8.613159e-02
 
 
-#Logit con Lasso y cambio en cutoff
+##########Logit con lasso - ROC
+set.seed(123)
+mylogit_lasso_roc <- train(
+  hogar_es_pobre ~ valor_arriendo+mujer +superior + P6040 + P6090 + P7510s3 + P7510s5, 
+  data = training,
+  method = "glmnet",
+  trControl = ctrl,
+  family = "binomial",
+  metric = "ROC",
+  tuneGrid = expand.grid(alpha = 0, lambda=lambda_grid),
+  preProcess = c("center", "scale")
+)
 
-evalResults <- data.frame(Pobre = evaluation$Pobre)
-evalReults$Roc <- predict(mylogit_lasso_roc,
+mylogit_lasso_roc
+#Tuning parameter 'alpha' was held constant at a value of 0
+#ROC was used to select the optimal model using the largest value.
+#The final values used for the model were alpha = 0 and lambda = 0.009654893.
+
+
+result_logitcv <- logit_caret_pob[["results"]]
+colnames(result_logitcv)[1]<-"lambda"
+result_lassoacc <- logit_lasso[["results"]][54,-1]
+result_lassoroc<- logit_lasso_ROC[["results"]][54,-1]
+result_lassosens<- logit_lasso_sens[["results"]][100,-1]
+results<-rbind(result_logitcv,result_lassoacc,result_lassoroc, result_lassosens)
+
+results<-rbind(mylogit_caret,mylogit_enet_sens,mylogit_lasso_sens, mylogit_lasso_roc)
+
+
+
+######Logit con Lasso y cambio en cutoff
+#Para el cambio de cutoofs lo hago en la muestra de evaluation
+
+evalResults <- data.frame(hogar_es_pobre = evaluation$hogar_es_pobre)
+evalResults$Roc <- predict(mylogit_lasso_roc,
                           newdata = evaluation,
                           type = "prob") [,1]
 
 library(pROC)
-rfROC <- roc(evalResults$Pobre, evalResults$Roc, levels = rev(levels(evalResults$Pobre)))
+rfROC <- roc(evalResults$hogar_es_pobre, evalResults$Roc, levels = rev(levels(evalResults$hogar_es_pobre)))
 rfROC
 
+#Aquí queremos encontrar el treshold que esta mas cerca a la esquina superior izquierda
 rfThresh <- coords(rfROC, x = "best", best.method = "closest.topleft")
 rfThresh
+#threshold specificity sensitivity
+#0.1978883   0.6511965    0.744887
 
-evalResults <- evalResults %>% mutate(hat_def_05=ifelse(evalResults$ROC>0.5,"Si","No"),
-                                      hat_def_rfThresh=ifelse(evalResults$ROC>rfThresh$threshold,"Si","No"))
+evalResults <- evalResults %>% mutate(hat_def_05=ifelse(evalResults$Roc>0.5,"Si","No"),
+                                      hat_def_rfThresh=ifelse(evalResults$Roc>rfThresh$threshold,"Si","No"))
 
-with(evalResults,table(Pobre,hat_de_05))
 
-with (evalResults,table(Default,hat_def_rfThresh))
+with(evalResults,table(hogar_es_pobre,hat_def_05))
+#hogar_es_pobre   No   Si
+#             Si 1706  152
+#             No 8167  107
 
+
+with (evalResults,table(hogar_es_pobre,hat_def_rfThresh))
+#hogar_es_pobre   No   Si
+#             Si  474 1384
+#             No 5388 2886
+
+#Con el nuevo cutoff estamos obteniendo mas verdaderos si, tenemos mas falsos positivos pero menos falsos negativos. 
 
 
 
