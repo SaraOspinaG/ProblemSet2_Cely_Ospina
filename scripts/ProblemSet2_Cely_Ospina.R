@@ -496,6 +496,9 @@ test_personas_f <- test_personas_f %>% subset(P6040 <= upper_bound_ete) #quitar 
 
 
 
+
+
+
 #################################
 #Unir Train
 ############
@@ -692,6 +695,15 @@ test_final <- test_final %>%
   mutate(per_cuarto = (test_final$Nper / test_final$P5010 ))
 
 
+#voy a crear una variable de arriendo por persona 
+#(intuicion: entre mas personas haya "pagando arriendo" en un hogar, si el valor de arriendo es muy bajo, denota que aun entre estas varias personas no alcanzan a pagar un lugar mas caro)
+
+
+#arriendo por persona
+train_final <- train_final %>% 
+  mutate(arriendo_per = (train_final$valor_arriendo / train_final$Nper ))
+
+
 #############################
 #2. Estadistica descriptiva general
 ###############################
@@ -731,6 +743,7 @@ var_lab(train_final$P6090) = "Entidad salud jefe de hogar (1=si)"
 var_lab(train_final$P7510s3) = "Jefe de hogar recibe ayudas institucionales"
 var_lab(train_final$P7510s5) = "Jefe de hogar recibe dinero de productos financieros"
 var_lab(train_final$per_cuarto) = "Numero de personas que duermen en cada cuarto del hogar"
+var_lab(train_final$arriendo_per) = "Valor arriendo / num personas hogar"
 
 dim(train_final) #151982     31
 
@@ -896,12 +909,44 @@ summary(testing$hogarpobre) #19,0%    #podemos concluir que si estan semejantes
 #en clasificacion nuestra variable Y es si es pobre o no es pobre
 
 
+#Como la muestra esta desbalanceada, aqui pondre un UpSample
+
+#############################
+###   UpSample   ########
+#############################
+
+set.seed(123)
+
+training_ups <- upSample(x = training,
+                         y = training$hogar_es_pobre,
+                         ## keep the class variable name the same:
+                         yname = "hogar_es_pobre")
+
+
+dim(training) #121586     49
+dim(training_ups) #196174     50  #o sea aumentan las observaciones
+
+table(training_ups$hogar_es_pobre)
+
+#Si    No 
+#98087 98087  #queda 50-50
+
+
 
 #############################
 ###   RandomForests   ########
 #############################
 
 #OBJETIVO= meter muchas variables y que nos indique cuales son las mejores
+#le voy a lanzar un monton de variables a ver cuales pone como importantes
+#sin embargo recordar que tienen que estar en test_final tambien
+
+intersect(names(training), names(test_final))
+
+#[1] "id"             "Clase"          "Dominio"        "P5000"          "P5010"          "P5090"         
+#[7] "P5100"          "P5130"          "P5140"          "Nper"           "Npersug"        "Li"            
+#[13] "Lp"             "Fex_c"          "Depto"          "Fex_dpto"       "valor_arriendo" "mujer"         
+#[19] "Oc"             "P6210"          "P6040"          "P6090"          "P7510s3"        "P7510s5"
 
 #install.packages("randomForest")
 
@@ -960,6 +1005,8 @@ pred_rf<-predict(forest,testing)
 #comparar
 confusionMatrix(testing$hogar_es_pobre,pred_rf)
 
+summary(training$viv_arrendada)
+
 #Confusion Matrix and Statistics
 
 #Reference
@@ -988,29 +1035,6 @@ confusionMatrix(testing$hogar_es_pobre,pred_rf)
 #     'Positive' Class : Si          
 
 
-
-
-#Como la muestra esta desbalanceada, aqui pondre un UpSample
-
-#############################
-###   UpSample   ########
-#############################
-
-set.seed(123)
-
-training_ups <- upSample(x = training,
-                         y = training$hogar_es_pobre,
-                         ## keep the class variable name the same:
-                         yname = "hogar_es_pobre")
-
-
-dim(training) #121586     49
-dim(training_ups) #196174     50  #o sea aumentan las observaciones
-
-table(training_ups$hogar_es_pobre)
-
-#Si    No 
-#98087 98087  #queda 50-50
 
 
 
@@ -1048,8 +1072,8 @@ set.seed(123)
 ######por ahora esas ^
 
 xgboost <- train(
-  hogar_es_pobre ~ P6040 + P5010 + Nper+ valor_arriendo + mujer + Oc + primaria
-  data = training, #mas adelante le podemos meter la muestra UpSampled
+  hogar_es_pobre ~ per_cuarto + P6040 + valor_arriendo + mujer + Oc + primaria, #per_cuarto la añado porque es una transformacion de P5010 con relacion a Nper
+  data = training_ups, #mde una vez le pongo la muestra UpSampled
   method = "xgbTree",
   trControl = ctrl,
   metric = "Sens",
@@ -1057,28 +1081,53 @@ xgboost <- train(
   preProcess = c("center", "scale")
 )
 
+#se demoro en correr 
+# hora de inicio
+#[19:43:52] WARNING: amalgamation/../src/c_api/c_api.cc:785: `ntree_limit` is deprecated, use `iteration_range` instead.
+# hora final
+#[22:34:30] WARNING: amalgamation/../src/c_api/c_api.cc:785: `ntree_limit` is deprecated, use `iteration_range` instead.
+
+pred_xgb<-predict(xgboost,testing)
+
+confusionMatrix(testing$hogar_es_pobre,pred_xgb)
+
+#Confusion Matrix and Statistics
+
+#Reference
+#Prediction    Si    No
+#Si  2749  1113
+#No  4259 12143
+
+#Accuracy : 0.7349         
+#95% CI : (0.7288, 0.741)
+#No Information Rate : 0.6542         
+#P-Value [Acc > NIR] : < 2.2e-16      
+
+#Kappa : 0.3448         
+
+#Mcnemar's Test P-Value : < 2.2e-16      
+                                         
+#            Sensitivity : 0.3923     #notar que no es muy buena, de hecho es menor que la de random forests     
+#            Specificity : 0.9160         
+#         Pos Pred Value : 0.7118         
+#         Neg Pred Value : 0.7403         
+#             Prevalence : 0.3458         
+#         Detection Rate : 0.1357         
+#   Detection Prevalence : 0.1906         
+#      Balanced Accuracy : 0.6542         
+                                         
+#      'Positive' Class : Si             
 
 
 
 
 #########################
-###   AdaBoost   ########
+###   AdaBoost   ######## #especial para clasificacion
 #########################
 
 #install.packages("fastAdaboost")
 
-#le voy a lanzar un monton de variables a ver cuales pone como importantes
-#sin embargo recordar que tienen que estar en test_final tambien
-intersect(names(training), names(test_final))
-
-#[1] "id"             "Clase"          "Dominio"        "P5000"          "P5010"          "P5090"         
-#[7] "P5100"          "P5130"          "P5140"          "Nper"           "Npersug"        "Li"            
-#[13] "Lp"             "Fex_c"          "Depto"          "Fex_dpto"       "valor_arriendo" "mujer"         
-#[19] "Oc"             "P6210"          "P6040"          "P6090"          "P7510s3"        "P7510s5"
-
-class(training$Dominio) #factor
-
-#prueba con pocas explicativas para ver si corre bien el codigo ##############
+#lo voy a sacar con pocas explicativas, dentro de las cuales pondre arriendo_per que la acabo de crear 
 
 adaboost <- train(
     hogar_es_pobre ~ mujer + viv_propia ,
