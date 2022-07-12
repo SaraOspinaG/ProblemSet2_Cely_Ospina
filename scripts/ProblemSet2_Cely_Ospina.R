@@ -41,8 +41,8 @@ predict<- stats::predict  #con esto soluciono el problema de que haya mas de una
 
 ##Establecer el directorio
 #setwd
-#setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
-setwd("C:/Users/Camila Cely/Documents/GitHub/ProblemSet2_Cely_Ospina")
+setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
+#setwd("C:/Users/Camila Cely/Documents/GitHub/ProblemSet2_Cely_Ospina")
 
 ##traer las bases de train y de test
 train_hogares<-readRDS("stores/train_hogares.Rds")
@@ -684,6 +684,12 @@ test_final <- test_final %>%
 test_final <- test_final %>% 
   mutate(educ_ns_nr = if_else(test_final$P6210=="No sabe, no informa", 1, 0))
 
+##########Incluimos la variable de personas por cuartos
+train_final <- train_final %>% 
+  mutate(per_cuarto = (train_final$Nper / train_final$P5010 ))
+
+test_final <- test_final %>% 
+  mutate(per_cuarto = (test_final$Nper / test_final$P5010 ))
 
 
 #############################
