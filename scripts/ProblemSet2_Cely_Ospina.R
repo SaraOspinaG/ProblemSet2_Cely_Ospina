@@ -1208,8 +1208,9 @@ confusionMatrix(testing$hogar_es_pobre,pred_ada)
 
 
 
-
-#######Modelos Logit######
+############################################
+###   LOGIT, LASSO, ENET - AUC, SENS########
+############################################
 
 #Logit con cross validation
 #Vamos a combinar las dos para tener todas las estadísticas, pero nos vamos a centrar en la sensibilidad: 
@@ -1222,10 +1223,11 @@ ctrl<- trainControl(method = "cv",
                     savePredictions = T)
 
 #Uso siempre la misma semilla para que sea comparable
-#1.1
+#1.1 Inculuimos las 5 variables mas importantes segun arboles
+
 set.seed(123)
 mylogit_caret <- train(
-  hogar_es_pobre ~  mujer + superior + P6040, 
+  hogar_es_pobre ~  P6040 + valor_arriendo + P5000 + P5010 + mujer, 
   data = training,
   method = "glm",
   trControl = ctrl,
@@ -1234,8 +1236,8 @@ mylogit_caret <- train(
 )
 mylogit_caret
 
-#ROC        Sens         Spec       Accuracy   Kappa      
-#0.6917659  0.006468293  0.9993067  0.8074203  0.009263736
+#ROC        Sens        Spec       Accuracy  Kappa    
+#0.7589398  0.09221681  0.9828825  0.810743  0.1101238
 #Accuracy es VN+VP/VN+VP+FN+FP = tenemos 81% de efectividad, aleatorio daría parecido, no está tan bien
 #La sensibilidad está muy bajita comparado con el ejemplo que vimos en clase 
 
@@ -1244,7 +1246,7 @@ mylogit_caret
 #1.2
 set.seed(123)
 mylogit_caret2 <- train(
-  hogar_es_pobre ~ viv_propia + mujer + superior + P6040 + P5090 + valor_arriendo , 
+  hogar_es_pobre ~ P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria , 
   data = training,
   method = "glm",
   trControl = ctrl,
@@ -1253,15 +1255,15 @@ mylogit_caret2 <- train(
 )
 mylogit_caret2
 
-#ROC        Sens       Spec       Accuracy   Kappa    
-#0.7664873  0.1288993  0.9780297  0.8139177  0.1519466
-#Accuracy es VN+VP/VN+VP+FN+FP = tenemos 81% de efectividad, aleatorio daría parecido, no está tan bien
+#ROC        Sens      Spec       Accuracy   Kappa    
+#0.8063211  0.242308  0.9655204  0.8257447  0.2710836
+#Accuracy es VN+VP/VN+VP+FN+FP = tenemos 82% de efectividad, aleatorio daría parecido, no está tan bien
 #La sensibilidad está muy bajita comparado con el ejemplo que vimos en clase 
 
 #1.3
 set.seed(123)
 mylogit_caret3 <- train(
-  hogar_es_pobre ~viv_propia + mujer + superior + P6040 + P5090 + valor_arriendo + P7510s3 + P7510s5, 
+  hogar_es_pobre ~P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia, 
   data = training,
   method = "glm",
   trControl = ctrl,
@@ -1270,10 +1272,25 @@ mylogit_caret3 <- train(
 )
 mylogit_caret3
 
-#ROC        Sens       Spec       Accuracy   Kappa    
-#0.7664873  0.1288993  0.9780297  0.8139177  0.1519466
-#Accuracy es VN+VP/VN+VP+FN+FP = tenemos 81% de efectividad, aleatorio daría parecido, no está tan bien
-#La sensibilidad está muy bajita comparado con el ejemplo que vimos en clase 
+#ROC        Sens       Spec      Accuracy   Kappa    
+#0.8129575  0.2498403  0.963512  0.8255802  0.2761036
+#Mejora la sens y spec y accu se mantiene relativamente bien
+
+#1.4 El modelo que mejor corrio con upsample
+set.seed(123)
+mylogit_caret4 <- train(
+  hogar_es_pobre ~P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia, 
+  data = training_ups,
+  method = "glm",
+  trControl = ctrl,
+  family = "binomial",
+  preProcess = c("center", "scale")
+)
+mylogit_caret4
+
+#ROC       Sens       Spec       Accuracy   Kappa    
+#0.812844  0.7495998  0.7241224  0.7368611  0.4737222
+#Mejora mucho la sensibilidad, baja la especificidad y el accuracy pero nos castigan mas los falsos negativos
 
 
 
@@ -1284,8 +1301,8 @@ lambda_grid
 
 set.seed(123)
 mylogit_enet_sens <- train(
-  hogar_es_pobre ~ valor_arriendo+mujer +superior + P6040 + P6090 + P7510s3 + P7510s5, 
-  data = training,
+  hogar_es_pobre ~ P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia, 
+  data = training_ups,
   method = "glmnet",
   trControl = ctrl,
   family = "binomial",
@@ -1293,8 +1310,6 @@ mylogit_enet_sens <- train(
   tuneGrid = ,
   preProcess = c("center", "scale")
 )
-
-help(train)
 
 mylogit_enet_sens
 #Sens was used to select the optimal model using the largest value.
@@ -1311,9 +1326,10 @@ install.packages("glmnet")
 lambda_grid <- 10^seq(-4, 0.01, length = 100)
 lambda_grid
 
+#3.1
 set.seed(123)
 mylogit_lasso_sens <- train(
-  hogar_es_pobre ~ valor_arriendo+mujer +superior + P6040 + P6090 + P7510s3 + P7510s5, 
+  hogar_es_pobre ~ P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia, 
   data = training,
   method = "glmnet",
   trControl = ctrl,
@@ -1324,113 +1340,201 @@ mylogit_lasso_sens <- train(
 )
 
 mylogit_lasso_sens
-#Tuning parameter 'alpha' was held constant at a value of 0
 #Sens was used to select the optimal model using the largest value.
-#The final values used for the model were alpha = 0 and lambda = 0.0105987.
-#Sensibility = 8.613159e-02
+#The final values used for the model were alpha = 0 and lambda = 0.01163476.
+#0.0116347639  0.8124338  0.1927314820  0.9760824  0.8246837  0.2309213723
+#Sensibility se comporta peor que todos
+#Estara castigando por variables?
 
-
-##########Logit con lasso - ROC
+#3.2
 set.seed(123)
-mylogit_lasso_roc <- train(
-  hogar_es_pobre ~ valor_arriendo+mujer +superior + P6040 + P6090 + P7510s3 + P7510s5, 
+mylogit_lasso_sens2 <- train(
+  hogar_es_pobre ~ P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer, 
   data = training,
   method = "glmnet",
   trControl = ctrl,
   family = "binomial",
-  metric = "ROC",
+  metric = "Sens",
   tuneGrid = expand.grid(alpha = 0, lambda=lambda_grid),
   preProcess = c("center", "scale")
 )
 
-mylogit_lasso_roc
-#Tuning parameter 'alpha' was held constant at a value of 0
-#ROC was used to select the optimal model using the largest value.
-#The final values used for the model were alpha = 0 and lambda = 0.009654893.
+mylogit_lasso_sens2
+#Sens was used to select the optimal model using the largest value.
+#The final values used for the model were alpha = 0 and lambda = 0.01163476.
+#0.0116347639  0.8124338  0.1927314820  0.9760824  0.8246837  0.2309213723
+#Sensibility se comporta peor que todos
+#Sale todavía peor entonces correr con upsample
+
+#3.3. con las variables originales pero upsample
+set.seed(123)
+mylogit_lasso_sens3 <- train(
+  hogar_es_pobre ~ P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia, 
+  data = training_ups,
+  method = "glmnet",
+  trControl = ctrl,
+  family = "binomial",
+  metric = "Sens",
+  tuneGrid = expand.grid(alpha = 0, lambda=lambda_grid),
+  preProcess = c("center", "scale")
+)
+
+mylogit_lasso_sens3
+# 0.0185473910  0.8122824  0.7480501  0.7236331  0.7358416  0.4716832
+#lambda = 0.01854739
 
 
-
-
-######Logit con Lasso y cambio en cutoff
+######Logit + upsample y cambio en cutoff - escogimos el mejor modelo de los anteriores : 1.4.
 #Para el cambio de cutoofs lo hago en la muestra de evaluation
-
+#4.1. 
 evalResults <- data.frame(hogar_es_pobre = evaluation$hogar_es_pobre)
-evalResults$Roc <- predict(mylogit_lasso_roc,
+evalResults$Roc <- predict(mylogit_lasso_sens3,
                           newdata = evaluation,
                           type = "prob") [,1]
 
 library(pROC)
 rfROC <- roc(evalResults$hogar_es_pobre, evalResults$Roc, levels = rev(levels(evalResults$hogar_es_pobre)))
 rfROC
+#Data: evalResults$Roc in 8274 controls (evalResults$hogar_es_pobre No) < 1858 cases (evalResults$hogar_es_pobre Si).
+#Area under the curve: 0.8197
 
 #Aquí queremos encontrar el treshold que esta mas cerca a la esquina superior izquierda
 rfThresh <- coords(rfROC, x = "best", best.method = "closest.topleft")
 rfThresh
-#threshold specificity sensitivity
-#0.1978883   0.6511965    0.744887
+#threshold    specificity sensitivity
+#1 0.4920455   0.7237128   0.7707212
+
 
 evalResults <- evalResults %>% mutate(hat_def_05=ifelse(evalResults$Roc>0.5,"Si","No"),
                                       hat_def_rfThresh=ifelse(evalResults$Roc>rfThresh$threshold,"Si","No"))
 
 
 with(evalResults,table(hogar_es_pobre,hat_def_05))
+#hat_def_05
 #hogar_es_pobre   No   Si
-#             Si 1706  152
-#             No 8167  107
+#             Si  452 1406
+#             No 6065 2209
 
 
 with (evalResults,table(hogar_es_pobre,hat_def_rfThresh))
+#hogar_es_pobre    No   Si
+#              Si  426 1432
+#              No 5988 2286
+
+
+######Logit con Lasso sin y cambio en cutoff
+#4.2. Este lo corremos para comparar las predicciones en comparacion del modelo con el upsample
+evalResults2 <- data.frame(hogar_es_pobre = evaluation$hogar_es_pobre)
+evalResults2$Roc <- predict(mylogit_caret3,
+                           newdata = evaluation,
+                           type = "prob") [,1]
+
+library(pROC)
+rfROC2 <- roc(evalResults2$hogar_es_pobre, evalResults2$Roc, levels = rev(levels(evalResults2$hogar_es_pobre)))
+rfROC2
+#Data: evalResults2$Roc in 8274 controls (evalResults2$hogar_es_pobre No) < 1858 cases (evalResults2$hogar_es_pobre Si).
+#Area under the curve: 0.8188
+
+#Aquí queremos encontrar el treshold que esta mas cerca a la esquina superior izquierda
+rfThresh2 <- coords(rfROC, x = "best", best.method = "closest.topleft")
+rfThresh2
+# threshold   specificity sensitivity
+#1 0.2044688   0.7481267   0.7481163
+
+
+evalResults2 <- evalResults2 %>% mutate(hat_def_052=ifelse(evalResults2$Roc>0.5,"Si","No"),
+                                      hat_def_rfThresh2=ifelse(evalResults2$Roc>rfThresh2$threshold,"Si","No"))
+
+
+with(evalResults2,table(hogar_es_pobre,hat_def_052))
 #hogar_es_pobre   No   Si
-#             Si  474 1384
-#             No 5388 2886
+#             Si  1386  472
+#             No 7969  305
 
 
+with (evalResults2,table(hogar_es_pobre,hat_def_rfThresh2))
+#hogar_es_pobre    No   Si
+#              Si  468 1390
+#              No 6190 2084
 
 
 #Con el nuevo cutoff estamos obteniendo mas verdaderos si, tenemos mas falsos positivos pero menos falsos negativos. 
 #Lo que mas nos importa es predecir bien los pobres
 
 
-evalResults2 <- data.frame(hogar_es_pobre = evaluation$hogar_es_pobre)
-evalResults2$Roc <- predict(mylogit_enet_sens,
-                           newdata = evaluation,
-                           type = "prob") [,1]
-
-evalResults2 <- evalResults2 %>% mutate(hat_def_06=ifelse(evalResults2$Roc>0.5,"Si","No"),
-                                      hat_def_rfThresh2=ifelse(evalResults2$Roc>rfThresh$threshold,"Si","No"))
-
-
-library(pROC)
-rfROC2 <- roc(evalResults2$hogar_es_pobre, evalResults2$Roc, levels = rev(levels(evalResults2$hogar_es_pobre)))
-rfROC2
-
-with(evalResults2,table(hogar_es_pobre,hat_def_06))
-#hat_def_06
-#hogar_es_pobre   No   Si
-#             Si 1665  193
-#             No 8128  146
-with (evalResults2,table(hogar_es_pobre,hat_def_rfThresh2))
-#hat_def_rfThresh2
-#hogar_es_pobre   No   Si
-#             Si  503 1355
-#             No 5469 2805
-
-
-
-
-
-
-#Logit con Lasso y resampleo
-#Arbol normal
-
 
 ##5. Regresiones
 #Ingreso
+model1<-lm(Ingtotugarr~1, data=training) 
+model2<-lm(Ingtotugarr~P6040 + valor_arriendo + P5010 + P5000 + mujer, data=training) 
+model3<-lm(Ingtotugarr~poly(P6040, 2) + valor_arriendo + P5010 + P5000 + per_cuarto + mujer, data=training) 
+model4<-lm(Ingtotugarr~P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia, data=training) 
+model5<-lm(Ingtotugarr~P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia + mujer:primaria + mujer:viv_propia, data=training) 
 
-###hago algo, guardo y hago commit   
+stargazer(model1, model2, model3, model4, model5)
+
+
+#sacamos los modelos fuera de muestra y el MSE para cada uno de los modelos: 
+test$model1<-predict(model1,newdata = test)
+mse1<-with (test, mean((logingtot-model1)^2))
+
+test$model2<-predict(model2,newdata=test)
+mse2<-with (test, mean((logingtot-model2)^2))
+
+test$model3<-predict(model3,newdata=test)
+mse3<-with (test, mean((logingtot-model3)^2))
+
+test$model4<-predict(model4,newdata=test)
+mse4<-with (test, mean((logingtot-model4)^2))
+
+test$model5<-predict(model5,newdata=test)
+mse5<-with (test, mean((logingtot-model5)^2))
+
+test$model6<-predict(model6,newdata=test)
+mse6<-with (test, mean((logingtot-model6)^2))
+
+test$model7<-predict(model7,newdata=test)
+mse7<-with (test, mean((logingtot-model7)^2))
+
+test$model8<-predict(model8,newdata=test)
+mse8<-with (test, mean((logingtot-model8)^2))
+
+test$model9<-predict(model9,newdata=test)
+mse9<-with (test, mean((logingtot-model9)^2))
+
+allmse<-c(mse1,mse2,mse3,mse4,mse5,mse6,mse7,mse8,mse9)
+
+allmse1<-ggplot(test = aes(x=1:9, y=allmse))+
+  geom_line(aes(colour=variable))
+
+ggplot(data = test, aes(x=1:9, y=allmse)) + geom_line(aes(colour="tomato"))
+
+comp + scale_fill_manual(values = c("0"="tomato" , "1"="steelblue") , label = c("0"="Hombre" , "1"="Mujer") , name = "Genero")
 
 
 
+
+#################################################### 
+
+install.packages("glmnet")
+
+lambda_grid <- 10^seq(-4, 0.01, length = 100)
+lambda_grid
+
+#3.1
+set.seed(123)
+mylogit_lasso_sensR <- train(
+  Ingtotugarr ~ P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia, 
+  data = training,
+  method = "glmnet",
+  trControl = ctrl,
+  family = "binomial",
+  metric = "MSE",
+  tuneGrid = expand.grid(alpha = 0, lambda=lambda_grid),
+  preProcess = c("center", "scale")
+)
+
+mylogit_lasso_sensR
 
 
 
