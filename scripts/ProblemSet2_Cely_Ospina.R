@@ -1465,8 +1465,56 @@ with (evalResults2,table(hogar_es_pobre,hat_def_rfThresh2))
 
 ##5. Regresiones
 #Ingreso
+model1<-lm(Ingtotugarr~1, data=training) 
+model2<-lm(Ingtotugarr~P6040 + valor_arriendo + P5010 + P5000 + mujer, data=training) 
+model3<-lm(Ingtotugarr~poly(P6040, 2) + valor_arriendo + P5010 + P5000 + per_cuarto + mujer, data=training) 
+model4<-lm(Ingtotugarr~P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia, data=training) 
+model5<-lm(Ingtotugarr~P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia + mujer:primaria + mujer:viv_propia, data=training) 
 
-###hago algo, guardo y hago commit   
+stargazer(model1, model2, model3, model4, model5)
+
+
+#sacamos los modelos fuera de muestra y el MSE para cada uno de los modelos: 
+test$model1<-predict(model1,newdata = test)
+mse1<-with (test, mean((logingtot-model1)^2))
+
+test$model2<-predict(model2,newdata=test)
+mse2<-with (test, mean((logingtot-model2)^2))
+
+test$model3<-predict(model3,newdata=test)
+mse3<-with (test, mean((logingtot-model3)^2))
+
+test$model4<-predict(model4,newdata=test)
+mse4<-with (test, mean((logingtot-model4)^2))
+
+test$model5<-predict(model5,newdata=test)
+mse5<-with (test, mean((logingtot-model5)^2))
+
+test$model6<-predict(model6,newdata=test)
+mse6<-with (test, mean((logingtot-model6)^2))
+
+test$model7<-predict(model7,newdata=test)
+mse7<-with (test, mean((logingtot-model7)^2))
+
+test$model8<-predict(model8,newdata=test)
+mse8<-with (test, mean((logingtot-model8)^2))
+
+test$model9<-predict(model9,newdata=test)
+mse9<-with (test, mean((logingtot-model9)^2))
+
+allmse<-c(mse1,mse2,mse3,mse4,mse5,mse6,mse7,mse8,mse9)
+
+allmse1<-ggplot(test = aes(x=1:9, y=allmse))+
+  geom_line(aes(colour=variable))
+
+ggplot(data = test, aes(x=1:9, y=allmse)) + geom_line(aes(colour="tomato"))
+
+comp + scale_fill_manual(values = c("0"="tomato" , "1"="steelblue") , label = c("0"="Hombre" , "1"="Mujer") , name = "Genero")
+
+
+
+
+#################################################### 
 
 install.packages("glmnet")
 
