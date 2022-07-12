@@ -1214,6 +1214,8 @@ confusionMatrix(testing$hogar_es_pobre,pred_ada)
 
 #Logit con cross validation
 #Vamos a combinar las dos para tener todas las estadísticas, pero nos vamos a centrar en la sensibilidad: 
+  
+#Validación cruzada con 5 folds y todas las estadísticas: 
 fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
 ctrl<- trainControl(method = "cv", 
                     number = 5,
@@ -1236,6 +1238,9 @@ mylogit_caret <- train(
 )
 mylogit_caret
 
+
+
+
 #ROC        Sens        Spec       Accuracy  Kappa    
 #0.7589398  0.09221681  0.9828825  0.810743  0.1101238
 #Accuracy es VN+VP/VN+VP+FN+FP = tenemos 81% de efectividad, aleatorio daría parecido, no está tan bien
@@ -1257,8 +1262,7 @@ mylogit_caret2
 
 #ROC        Sens      Spec       Accuracy   Kappa    
 #0.8063211  0.242308  0.9655204  0.8257447  0.2710836
-#Accuracy es VN+VP/VN+VP+FN+FP = tenemos 82% de efectividad, aleatorio daría parecido, no está tan bien
-#La sensibilidad está muy bajita comparado con el ejemplo que vimos en clase 
+
 
 #1.3
 set.seed(123)
@@ -1463,82 +1467,118 @@ with (evalResults2,table(hogar_es_pobre,hat_def_rfThresh2))
 
 
 
+#Comparamos los modelos
+##Se realizan las comparaciones
+#testResults <- data.frame(hogar_es_pobre = testing$hogar_es_pobre)
+#testResults$logit<- predict(mylogit_caret,
+#                            newdata = testing,
+#                            type = "prob")[,1]
+#testResults$lasso<- predict(mylogit_lasso_roc,
+#                            newdata = testing,
+#                            type = "prob")[,1]
+#testResults$lasso_thresh<- predict(mylogit_lasso_roc,
+#                                   newdata = testing,
+#                                   type = "prob")[,1]
+#testResults$lasso_upsample<- predict(mylogit_lasso_upsample,
+#                                     newdata = testing,
+#                                     type = "prob")[,1]
+#testResults$mylogit_lasso_downsample<- predict(mylogit_lasso_downsample,
+#                                               newdata = testing,
+#                                               type = "prob")[,1]
+#testResults$mylogit_lasso_smote<- predict(mylogit_lasso_smote,
+#                                          newdata = testing,
+#                                          type = "prob")[,1]
+
+
+
+
 ##5. Regresiones
-#Ingreso
+#Ingreso en modelos de entrenamiento
 model1<-lm(Ingtotugarr~1, data=training) 
 model2<-lm(Ingtotugarr~P6040 + valor_arriendo + P5010 + P5000 + mujer, data=training) 
-model3<-lm(Ingtotugarr~poly(P6040, 2) + valor_arriendo + P5010 + P5000 + per_cuarto + mujer, data=training) 
-model4<-lm(Ingtotugarr~P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia, data=training) 
-model5<-lm(Ingtotugarr~P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia + mujer:primaria + mujer:viv_propia, data=training) 
+model3<-lm(Ingtotugarr~P6040 + valor_arriendo + P5010 + P5000 + mujer + per_cuarto , data=training) 
+model4<-lm(Ingtotugarr~P6040 + valor_arriendo + P5010 + P5000 + mujer + per_cuarto + primaria + viv_propia, data=training) 
+model5<-lm(Ingtotugarr~P6040 + valor_arriendo + P5010 + P5000 + mujer + per_cuarto + primaria + viv_propia + mujer:primaria + mujer:viv_propia + poly(P6040, 2), data=training) 
+model7<-lm(Ingtotugarr~P6040 + valor_arriendo + mujer + per_cuarto + primaria + viv_propia, data=training) 
 
-stargazer(model1, model2, model3, model4, model5)
+summary(model66)
+stargazer(model1, model2, model3, model4, model5, type="text")
 
+
+model6<-lm(Ingtotugarr~P6040 + valor_arriendo + P5010 + P5000 + mujer + per_cuarto + primaria + viv_propia, data=training_ups) 
+
+stargazer( model5, model6, type="text")
 
 #sacamos los modelos fuera de muestra y el MSE para cada uno de los modelos: 
-test$model1<-predict(model1,newdata = test)
-mse1<-with (test, mean((logingtot-model1)^2))
+testing$model1<-predict(model1,newdata = testing)
+mse1<-with (testing, mean((Ingtotugarr-model1)^2))
 
-test$model2<-predict(model2,newdata=test)
-mse2<-with (test, mean((logingtot-model2)^2))
+testing$model2<-predict(model2,newdata=testing)
+mse2<-with (testing, mean((Ingtotugarr-model2)^2))
 
-test$model3<-predict(model3,newdata=test)
-mse3<-with (test, mean((logingtot-model3)^2))
+testing$model3<-predict(model3,newdata=testing)
+mse3<-with (testing, mean((Ingtotugarr-model3)^2))
 
-test$model4<-predict(model4,newdata=test)
-mse4<-with (test, mean((logingtot-model4)^2))
+testing$model4<-predict(model4,newdata=testing)
+mse4<-with (testing, mean((Ingtotugarr-model4)^2))
 
-test$model5<-predict(model5,newdata=test)
-mse5<-with (test, mean((logingtot-model5)^2))
+testing$model5<-predict(model5,newdata=testing)
+mse5<-with (testing, mean((Ingtotugarr-model5)^2))
 
-test$model6<-predict(model6,newdata=test)
-mse6<-with (test, mean((logingtot-model6)^2))
+testing$model6<-predict(model6,newdata=testing)
+mse6<-with (testing, mean((Ingtotugarr-model6)^2))
 
-test$model7<-predict(model7,newdata=test)
-mse7<-with (test, mean((logingtot-model7)^2))
+testing$model7<-predict(model7,newdata=testing)
+mse7<-with (testing, mean((Ingtotugarr-model7)^2))
 
-test$model8<-predict(model8,newdata=test)
-mse8<-with (test, mean((logingtot-model8)^2))
+#Vamos a comparar los diferentes MSE
+stargazer(mse1, mse2, mse3, mse4, mse5, mse6, mse66, type="text")
+allmse<-c(mse1,mse2,mse3,mse4,mse5,mse6, mse7)
 
-test$model9<-predict(model9,newdata=test)
-mse9<-with (test, mean((logingtot-model9)^2))
+allmse1<-ggplot(mapping = aes(x=1:7, y=allmse))+
+  geom_line(colour= "tomato")+
+              xlab("f(x)")+
+              ylab("MSE")+
+              ggtitle("comportamiento de f(x) para MSE")+
+              theme(plot.title = element_text(hjust = 0.5))+
+              scale_x_continuous(breaks = seq(1,11,1))
 
-allmse<-c(mse1,mse2,mse3,mse4,mse5,mse6,mse7,mse8,mse9)
+allmse1
+#Podemos ver que el modelo 5 es el que tiene el MSE mas pequeño. Pero el 4 es parecido y tiene menos variables
 
-allmse1<-ggplot(test = aes(x=1:9, y=allmse))+
-  geom_line(aes(colour=variable))
+#######Modelo Lasso
 
-ggplot(data = test, aes(x=1:9, y=allmse)) + geom_line(aes(colour="tomato"))
+library(glmnet)
 
-comp + scale_fill_manual(values = c("0"="tomato" , "1"="steelblue") , label = c("0"="Hombre" , "1"="Mujer") , name = "Genero")
+df_coeficientes <- model4$coefficients %>%
+  enframe(name = "predictor", value = "coeficiente")
+
+df_coeficientes %>%
+  filter(predictor != "(Intercept)") %>%
+  ggplot(aes(x = predictor, y = coeficiente)) +
+  geom_col() +
+  labs(title = "Coeficientes del modelo OLS") +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 5, angle = 45))
 
 
+x_train <- model.matrix(Ingtotugarr~ P6040 + valor_arriendo + P5010 + P5000 + mujer + per_cuarto + primaria + viv_propia,data = train_hogares)[, -1]
+y_train <- train_hogares$Ingtotugarr
 
 
-#################################################### 
-
-install.packages("glmnet")
-
-lambda_grid <- 10^seq(-4, 0.01, length = 100)
-lambda_grid
-
-#3.1
-set.seed(123)
-mylogit_lasso_sensR <- train(
-  Ingtotugarr ~ P6040 + valor_arriendo + per_cuarto + P5010 + P5000 + mujer + primaria + viv_propia, 
-  data = training,
-  method = "glmnet",
-  trControl = ctrl,
-  family = "binomial",
-  metric = "MSE",
-  tuneGrid = expand.grid(alpha = 0, lambda=lambda_grid),
-  preProcess = c("center", "scale")
+modelo <- glmnet(
+  x           = x_train,
+  y           = Y_train,
+  alpha       = 1,
+  nlambda     = 100,
+  standardize = TRUE
 )
 
-mylogit_lasso_sensR
+
+P6040 + valor_arriendo + P5010 + P5000 + mujer + per_cuarto + primaria + viv_propia
 
 
-
-
+training %>%   select(hogarpobre, mujer, P6040, P6210, arriendo_per, per_cuarto, Ingtotugarr) %>%   tbl_summary(by=mujer)
 
 
 
