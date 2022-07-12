@@ -730,6 +730,7 @@ var_lab(train_final$P6040) = "Edad jefe de hogar"
 var_lab(train_final$P6090) = "Entidad salud jefe de hogar (1=si)"
 var_lab(train_final$P7510s3) = "Jefe de hogar recibe ayudas institucionales"
 var_lab(train_final$P7510s5) = "Jefe de hogar recibe dinero de productos financieros"
+var_lab(train_final$per_cuarto) = "Numero de personas que duermen en cada cuarto del hogar"
 
 dim(train_final) #151982     31
 
@@ -895,6 +896,7 @@ summary(testing$hogarpobre) #19,0%    #podemos concluir que si estan semejantes
 #en clasificacion nuestra variable Y es si es pobre o no es pobre
 
 
+
 #############################
 ###   RandomForests   ########
 #############################
@@ -984,6 +986,32 @@ confusionMatrix(testing$hogar_es_pobre,pred_rf)
 #     Balanced Accuracy : 0.64179        
 
 #     'Positive' Class : Si          
+
+
+
+
+#Como la muestra esta desbalanceada, aqui pondre un UpSample
+
+#############################
+###   UpSample   ########
+#############################
+
+set.seed(123)
+
+training_ups <- upSample(x = training,
+                         y = training$hogar_es_pobre,
+                         ## keep the class variable name the same:
+                         yname = "hogar_es_pobre")
+
+
+dim(training) #121586     49
+dim(training_ups) #196174     50  #o sea aumentan las observaciones
+
+table(training_ups$hogar_es_pobre)
+
+#Si    No 
+#98087 98087  #queda 50-50
+
 
 
 ###############Como ya sacamos RandomForests y sabemos las mejores variables, vamos a sacar XGBoost (boosting)
