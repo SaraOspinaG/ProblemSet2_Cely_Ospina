@@ -30,7 +30,8 @@ p_load(tidyverse,    #Para limpiar los datos
        gtsummary,
        expss,
        fastAdaboost,
-       randomForest) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
+       randomForest,
+       xgboost) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
 
 predict<- stats::predict  #con esto soluciono el problema de que haya mas de una libreria con este comando
 
@@ -927,7 +928,7 @@ varImp(forest,scale=TRUE)
 #P6040                 100.00000   #Edad del jefe de hogar   
 #valor_arriendo         72.28647   #cuanto pagan de arriendo
 #P5000                  28.00644   #cuantos cuartos tienen
-#P5010                  18.04168   #en cuantos cuartos duermen
+#P5010                  18.04168   #en cuantos cuartos duermen 
 #mujer                  14.78857   #si el jefe de hogar es mujer #de acuerdo con nuestra intuicion y con las estad descr
 #primaria                9.16831   #si el jefe de hogar tiene nivel educativo muy bajo
 #Oc                      8.04550   #si el jefe de hogar esta empleado
@@ -979,7 +980,48 @@ confusionMatrix(testing$hogar_es_pobre,pred_rf)
 #     'Positive' Class : Si          
 
 
+###############Como ya sacamos RandomForests y sabemos las mejores variables, vamos a sacar XGBoost (boosting)
+##### ya que este penaliza la complejidad del modelo, podemos empezar a probar modelos solo con las variables mas relevantes
 
+
+
+#########################
+###   XGBoost   ########
+#########################
+
+#install.packages("xgboost")
+#require("xgboost")
+
+
+grid_default <- expand.grid(nrounds = c(250,500),
+                            max_depth = c(4,6,8),
+                            eta = c(0.01,0.3,0.5), #tasa a la cual aprende, entre menor mas se demora
+                            gamma = c(0,1),
+                            min_child_weight = c(10, 25,50),
+                            colsample_bytree = c(0.7),
+                            subsample = c(0.6))
+
+set.seed(123)
+
+#entonces, recordar, a partir de random forests vamos a meterle estas variables=
+
+#P6040  
+#valor_arriendo
+#P5010
+#mujer
+#primaria
+#Oc   
+######por ahora esas ^
+
+xgboost <- train(
+  hogar_es_pobre ~ P6040 + P5010 + Nper+ valor_arriendo + mujer + Oc + primaria
+  data = training, #mas adelante le podemos meter la muestra UpSampled
+  method = "xgbTree",
+  trControl = ctrl,
+  metric = "Sens",
+  tuneGrid = grid_default,
+  preProcess = c("center", "scale")
+)
 
 
 
