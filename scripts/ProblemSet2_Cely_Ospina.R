@@ -1130,7 +1130,7 @@ confusionMatrix(testing$hogar_es_pobre,pred_xgb)
 #lo voy a sacar con pocas explicativas, dentro de las cuales pondre arriendo_per que la acabo de crear 
 
 adaboost <- train(
-    hogar_es_pobre ~ mujer + viv_propia ,
+    hogar_es_pobre ~ arriendo_per + per_cuarto + mujer + P6040 ,
     data = training,
     method = "adaboost",
     trControl = ctrl,
