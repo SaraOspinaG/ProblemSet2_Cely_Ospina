@@ -31,7 +31,9 @@ p_load(tidyverse,    #Para limpiar los datos
        expss,
        fastAdaboost,
        randomForest,
-       xgboost) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
+       xgboost,
+       glmnet,
+       pROC) #PLOAD PERMITE REPLICAR MAS FACIL PORQUE DE UNA VEZ INSTALA LAS LIBRERIAS SI UNO NO LAS TIENE
 
 predict<- stats::predict  #con esto soluciono el problema de que haya mas de una libreria con este comando
 
@@ -40,8 +42,9 @@ predict<- stats::predict  #con esto soluciono el problema de que haya mas de una
 ##cargar los datos
 
 ##Establecer el directorio
+
 #setwd
-setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
+#setwd("C:/Users/SARA/Documents/ESPECIALIZACIÓN/BIG DATA/GITHUB/ProblemSet2_Cely_Ospina")
 #setwd("C:/Users/Camila Cely/Documents/GitHub/ProblemSet2_Cely_Ospina")
 
 ##traer las bases de train y de test
@@ -148,7 +151,7 @@ class(test_personas$Dominio)
 #(Other)     :99680                   NA's   :159344      NA's   :64344       NA's   :100616   
 
 #Ahora tenemos que ver que hacer con las que tienen missing values
-                                    #amortizacion mensual  #arriendo estimado  #arriendo mensual
+#amortizacion mensual  #arriendo estimado  #arriendo mensual
 
 
 sum(train_hogares$P5090 == '1' | train_hogares$P5090 == '2' | train_hogares$P5090 == '4' | train_hogares$P5090 == '5' | train_hogares$P5090 == '6')
@@ -172,7 +175,7 @@ sum(train_hogares$P5090 == '3')
 #5 = arriendo estimado
 #6 = arriendo estimado
 
-       
+
 class(train_hogares$P5140)
 class(train_hogares$P5090)
 class(train_hogares$P5130) #nos estan saliendo estas tres variables como "labelled" "numeric" 
@@ -703,6 +706,10 @@ test_final <- test_final %>%
 train_final <- train_final %>% 
   mutate(arriendo_per = (train_final$valor_arriendo / train_final$Nper ))
 
+test_final <- test_final %>% 
+  mutate(arriendo_per = (test_final$valor_arriendo / test_final$Nper ))
+
+
 
 #############################
 #2. Estadistica descriptiva general
@@ -814,7 +821,7 @@ colnames(test_final)
 #[19] "Oc"             "P6210"          "P6040"          "P6090"          "P7510s3"        "P7510s5" 
 
 ##NOTAR que en test no esta la variable de Ingtotugarr, entonces hay que aprender a predecirla con lo que tenemos
-    
+
 var_lab(test_final$P5000) = "Num total de cuartos"
 var_lab(test_final$P5010) = "Num total de cuartos donde se duerme"
 var_lab(test_final$Npersug) = "Num personas por unidad de gasto"
@@ -932,7 +939,6 @@ table(training_ups$hogar_es_pobre)
 #98087 98087  #queda 50-50
 
 
-
 #############################
 ###   RandomForests   ########
 #############################
@@ -999,6 +1005,14 @@ varImp(forest,scale=TRUE)
 #preescolar              0.01527   #estas dos ultimas no sirven de mucho porque hay demasiado pocas observaciones
 #educ_ns_nr              0.00000
 
+
+varimp<-varImp(forest,scale=TRUE)
+
+plot(varimp)
+
+p<- ggplot(varimp)
+
+
 #Predecir
 pred_rf<-predict(forest,testing)
 
@@ -1011,7 +1025,7 @@ summary(training$viv_arrendada)
 
 #Reference
 #Prediction    Si    No
-#Si  1330  2532
+#        Si  1330  2532
 #No  1756 14646  #notar que predice como pobres a muchisimos no-pobres
 
 #Accuracy : 0.7884         
@@ -1023,7 +1037,7 @@ summary(training$viv_arrendada)
 
 #Mcnemar's Test P-Value : <2e-16         
 
-#           Sensitivity : 0.43098       #hace relativamente buen trabajo 
+#           Sensitivity : 0.43098       #hace relativamente buen trabajo aunque con muchas variables
 #           Specificity : 0.85260        
 #        Pos Pred Value : 0.34438        
 #        Neg Pred Value : 0.89294        
@@ -1044,7 +1058,7 @@ summary(training$viv_arrendada)
 
 
 #########################
-###   XGBoost   ########
+###   XGBoost version 1  ########
 #########################
 
 #install.packages("xgboost")
@@ -1071,7 +1085,7 @@ set.seed(123)
 #Oc   
 ######por ahora esas ^
 
-xgboost <- train(
+xgboost1 <- train(
   hogar_es_pobre ~ per_cuarto + P6040 + valor_arriendo + mujer + Oc + primaria, #per_cuarto la añado porque es una transformacion de P5010 con relacion a Nper
   data = training_ups, #mde una vez le pongo la muestra UpSampled
   method = "xgbTree",
@@ -1087,7 +1101,7 @@ xgboost <- train(
 # hora final
 #[22:34:30] WARNING: amalgamation/../src/c_api/c_api.cc:785: `ntree_limit` is deprecated, use `iteration_range` instead.
 
-pred_xgb<-predict(xgboost,testing)
+pred_xgb<-predict(xgboost1,testing)
 
 confusionMatrix(testing$hogar_es_pobre,pred_xgb)
 
@@ -1106,7 +1120,7 @@ confusionMatrix(testing$hogar_es_pobre,pred_xgb)
 #Kappa : 0.3448         
 
 #Mcnemar's Test P-Value : < 2.2e-16      
-                                         
+
 #            Sensitivity : 0.3923     #notar que no es muy buena, de hecho es menor que la de random forests     
 #            Specificity : 0.9160         
 #         Pos Pred Value : 0.7118         
@@ -1115,14 +1129,99 @@ confusionMatrix(testing$hogar_es_pobre,pred_xgb)
 #         Detection Rate : 0.1357         
 #   Detection Prevalence : 0.1906         
 #      Balanced Accuracy : 0.6542         
-                                         
+
 #      'Positive' Class : Si             
 
+##adaboost no ha querido correr, voy a correr otro xgboost (version 2)
+
+xgboost <- train(
+  hogar_es_pobre ~ arriendo_per + per_cuarto + mujer + P6040, # cuatro variables
+  data = training_ups, #de una vez le pongo la muestra UpSampled
+  method = "xgbTree",
+  trControl = ctrl,
+  metric = "Sens",
+  tuneGrid = grid_default,
+  preProcess = c("center", "scale")
+)
+
+#[15:23:29]
+#[17:58:16]
+
+pred_xgbf<-predict(xgboost,testing)
+
+confusionMatrix(testing$hogar_es_pobre,pred_xgbf)
+
+#Confusion Matrix and Statistics
+
+#Reference
+#Prediction    Si    No
+#Si  2828  1034
+#No  4594 11808
+
+#Accuracy : 0.7223         
+#95% CI : (0.716, 0.7284)
+#No Information Rate : 0.6337         
+#P-Value [Acc > NIR] : < 2.2e-16      
+
+#Kappa : 0.3344         
+
+#Mcnemar's Test P-Value : < 2.2e-16      
+
+#           Sensitivity : 0.3810  #### arruino mis expectativas tenia toda la fe en este modelo       
+#          Specificity : 0.9195         
+#      Pos Pred Value : 0.7323         
+#     Neg Pred Value : 0.7199         
+#        Prevalence : 0.3663         
+##        Detection Rate : 0.1396         
+#  Detection Prevalence : 0.1906         
+#  Balanced Accuracy : 0.6503         
+
+#     'Positive' Class : Si    
+
+#LE VOY A BUSCAR EL CUTOFF #############################################
+
+evalResultsf <- data.frame(hogar_es_pobre = evaluation$hogar_es_pobre)
+evalResultsf$Roc <- predict(xgboost,
+                            newdata = evaluation,
+                            type = "prob") [,1]
+
+
+library(pROC)
+rfROCf <- roc(evalResultsf$hogar_es_pobre, evalResultsf$Roc, levels = rev(levels(evalResultsf$hogar_es_pobre)))
+rfROCf
+
+#Data: evalResultsf$Roc in 8274 controls (evalResultsf$hogar_es_pobre No) < 1858 cases (evalResultsf$hogar_es_pobre Si).
+#Area under the curve: 0.8034
+
+#Aquí queremos encontrar el treshold que esta mas cerca a la esquina superior izquierda
+rfThreshf <- coords(rfROCf, x = "best", best.method = "closest.topleft")
+rfThreshf
+
+
+#threshold specificity sensitivity
+#1 0.4631944   0.6955523   0.7728741  ###el threshold es 0,46 #el mejor es demasiado cercano a 0,5
+
+evalResultsf <- evalResultsf %>% mutate(hat_def_05=ifelse(evalResultsf$Roc>0.5,"Si","No"),
+                                        hat_def_rfThreshf=ifelse(evalResultsf$Roc>rfThreshf$threshold,"Si","No"))
+
+
+with(evalResultsf,table(hogar_es_pobre,hat_def_05))
+#hat_def_05
+#hogar_es_pobre   No   Si   ####################
+#            Si  493 1365
+#            No 5992 2282
+
+
+with (evalResultsf,table(hogar_es_pobre,hat_def_rfThreshf))
+#hat_def_rfThreshf
+#hogar_es_pobre   No   Si
+#Si               422 1436 #no vale la pena
+#No              5755 2519
 
 
 
 #########################
-###   AdaBoost   ######## #especial para clasificacion
+###   AdaBoost   ######## #especial para clasificacion 
 #########################
 
 #install.packages("fastAdaboost")
@@ -1130,14 +1229,14 @@ confusionMatrix(testing$hogar_es_pobre,pred_xgb)
 #lo voy a sacar con pocas explicativas, dentro de las cuales pondre arriendo_per que la acabo de crear 
 
 adaboost <- train(
-    hogar_es_pobre ~ arriendo_per + per_cuarto + mujer + P6040 ,
-    data = training,
-    method = "adaboost",
-    trControl = ctrl,
-    family = "binomial",
-    metric = "Sens",
-    #preProcess = c("center", "scale")
-  )
+  hogar_es_pobre ~ mujer + viv_propia ,
+  data = training,
+  method = "adaboost",
+  trControl = ctrl,
+  family = "binomial",
+  metric = "Sens",
+  #preProcess = c("center", "scale")
+)
 
 #predecimos
 pred_ada<-predict(adaboost,testing)
@@ -1159,7 +1258,7 @@ confusionMatrix(testing$hogar_es_pobre,pred_ada)
 
 #Mcnemar's Test P-Value : <2e-16        
 
-#            Sensitivity : 0.2229        
+#            Sensitivity : 0.2229        ##no da tan bien 
 #            Specificity : 0.8676        
 #         Pos Pred Value : 0.7519        
 #         Neg Pred Value : 0.3828        
@@ -1168,43 +1267,7 @@ confusionMatrix(testing$hogar_es_pobre,pred_ada)
 #   Detection Prevalence : 0.1906        
 #      Balanced Accuracy : 0.5453        
 
-#       'Positive' Class : Si            
-
-
-
-
-
-
-  
-  
-  
-  
-  ##prueba forests codigo complementario #######pendiente
-  
-  ctrl<- trainControl(method = "cv",
-                      number = 5,
-                      summaryFunction = fiveStats,
-                      classProbs = TRUE,
-                      verbose=FALSE,
-                      savePredictions = T)
-  
-  modelo1 <- decision_tree() %>%
-    set_engine("rpart") %>%
-    set_mode("classification")
-  
-  
-  
-  
-################################################
-###   Soluciones a desbalance de clases  ########
-#################################################
-  
-  #como vimos, los hogares pobres son alrededor del 20% en las bases que tenemos, entonces vamos a hacer un remuestreo
-  
-
-
-
-
+#       'Positive' Class : Si         
 
 
 
@@ -1214,7 +1277,7 @@ confusionMatrix(testing$hogar_es_pobre,pred_ada)
 
 #Logit con cross validation
 #Vamos a combinar las dos para tener todas las estadísticas, pero nos vamos a centrar en la sensibilidad: 
-  
+
 #Validación cruzada con 5 folds y todas las estadísticas: 
 fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
 ctrl<- trainControl(method = "cv", 
@@ -1398,8 +1461,8 @@ mylogit_lasso_sens3
 #4.1. 
 evalResults <- data.frame(hogar_es_pobre = evaluation$hogar_es_pobre)
 evalResults$Roc <- predict(mylogit_lasso_sens3,
-                          newdata = evaluation,
-                          type = "prob") [,1]
+                           newdata = evaluation,
+                           type = "prob") [,1]
 
 library(pROC)
 rfROC <- roc(evalResults$hogar_es_pobre, evalResults$Roc, levels = rev(levels(evalResults$hogar_es_pobre)))
@@ -1435,8 +1498,8 @@ with (evalResults,table(hogar_es_pobre,hat_def_rfThresh))
 #4.2. Este lo corremos para comparar las predicciones en comparacion del modelo con el upsample
 evalResults2 <- data.frame(hogar_es_pobre = evaluation$hogar_es_pobre)
 evalResults2$Roc <- predict(mylogit_caret3,
-                           newdata = evaluation,
-                           type = "prob") [,1]
+                            newdata = evaluation,
+                            type = "prob") [,1]
 
 library(pROC)
 rfROC2 <- roc(evalResults2$hogar_es_pobre, evalResults2$Roc, levels = rev(levels(evalResults2$hogar_es_pobre)))
@@ -1452,7 +1515,7 @@ rfThresh2
 
 
 evalResults2 <- evalResults2 %>% mutate(hat_def_052=ifelse(evalResults2$Roc>0.5,"Si","No"),
-                                      hat_def_rfThresh2=ifelse(evalResults2$Roc>rfThresh2$threshold,"Si","No"))
+                                        hat_def_rfThresh2=ifelse(evalResults2$Roc>rfThresh2$threshold,"Si","No"))
 
 
 with(evalResults2,table(hogar_es_pobre,hat_def_052))
@@ -1489,36 +1552,38 @@ summary(testing$hogar_es_pobre)
 
 
 testResults$logit1<- predict(mylogit_caret,
-                            newdata = testing,
-                            type = "prob")[,1]
+                             newdata = testing,
+                             type = "prob")[,1]
 
 testResults$logit2<- predict(mylogit_caret2,
-                            newdata = testing,
-                            type = "prob")[,1]
+                             newdata = testing,
+                             type = "prob")[,1]
 
 testResults$logit3<- predict(mylogit_caret3,
                              newdata = testing,
                              type = "prob")[,1]
 
 testResults$logit4<- predict(mylogit_caret4,
-                              newdata = testing,
-                              type = "prob")[,1]
+                             newdata = testing,
+                             type = "prob")[,1]
 
 testResults$logit_enet<- predict(mylogit_enet_sens,
-                              newdata = testing,
-                              type = "prob")[,1]
+                                 newdata = testing,
+                                 type = "prob")[,1]
 
 testResults$lasso1<- predict(mylogit_lasso_sens,
-                              newdata = testing,
-                              type = "prob")[,1]
+                             newdata = testing,
+                             type = "prob")[,1]
 
 testResults$lasso2<- predict(mylogit_lasso_sens2,
-                              newdata = testing,
-                              type = "prob")[,1]
+                             newdata = testing,
+                             type = "prob")[,1]
 
 testResults$lasso_upsample<- predict(mylogit_lasso_sens3,
-                              newdata = testing,
-                              type = "prob")[,1]
+                                     newdata = testing,
+                                     type = "prob")[,1]
+
+view(testResults$lasso_upsample)
 
 testResults<-testResults %>%
   mutate(logit1=ifelse(logit>rfThresh$threshold,"Si","No"),
@@ -1531,6 +1596,20 @@ testResults<-testResults %>%
          lasso_upsample=ifelse(lasso_upsample>rfThresh$threshold,"Si","No"),
   )
 
+
+
+testResults<-testResults %>%
+  mutate(logit1=ifelse(logit1>rfThresh$threshold,"Si","No"),
+         logit2=ifelse(logit2>rfThresh$threshold,"Si","No"),
+         logit3=ifelse(logit3>rfThresh$threshold,"Si","No"),
+         logit4=ifelse(logit4>rfThresh$threshold,"Si","No"),
+         logit_enet=ifelse(logit_enet>rfThresh$threshold,"Si","No"),
+         lasso1 =ifelse(lasso1>rfThresh$threshold,"Si","No"),
+         lasso2=ifelse(lasso2>rfThresh$threshold,"Si","No"),
+         lasso_upsample=ifelse(lasso_upsample>rfThresh$threshold,"Si","No"),
+  )
+
+
 with(testResults,table(hogar_es_pobre,logit1))
 with(testResults,table(hogar_es_pobre,logit2))
 with(testResults,table(hogar_es_pobre,logit3))
@@ -1541,22 +1620,82 @@ with(testResults,table(hogar_es_pobre,lasso2))
 with(testResults,table(hogar_es_pobre,lasso_upsample))
 
 
-##  con base en esto se escoge el modelo XXXX que es el que mejor ajusta 
+
+
+
+##### PRUEBA CON MENOS VARIABLES ###############
+
+
+### 4 variables ####ESCOGIDO COMO EL FINAL 
+set.seed(123)
+mylogit_enet_sens_min <- train(
+  hogar_es_pobre ~ P6040 + arriendo_per + per_cuarto + mujer, 
+  data = training_ups,
+  method = "glmnet",
+  trControl = ctrl,
+  family = "binomial",
+  metric = "Sens",
+  tuneGrid = ,
+  preProcess = c("center", "scale")
+)
+
+mylogit_enet_sens_min
+
+testResults$log_enet_min<- predict(mylogit_enet_sens_min,
+                                   newdata = testing,
+                                   type = "prob")[,1]
+
+testResults<-testResults %>%
+  mutate(log_enet_min=ifelse(log_enet_min>rfThresh$threshold,"Si","No"))
+
+with(testResults,table(hogar_es_pobre,log_enet_min))
+
+### 3 variables #este da casi los mismos resultados pero se "cuelan" mas no-pobres
+set.seed(123)
+log_enet_3 <- train(
+  hogar_es_pobre ~ P6040 + arriendo_per + per_cuarto, 
+  data = training_ups,
+  method = "glmnet",
+  trControl = ctrl,
+  family = "binomial",
+  metric = "Sens",
+  tuneGrid = ,
+  preProcess = c("center", "scale")
+)
+
+log_enet_3
+
+testResults$log_enet_3<- predict(log_enet_3,
+                                 newdata = testing,
+                                 type = "prob")[,1]
+
+testResults<-testResults %>%
+  mutate(log_enet_3=ifelse(log_enet_3>rfThresh$threshold,"Si","No"))
+
+with(testResults,table(hogar_es_pobre,log_enet_3))
+
+
+##  con base en esto se escoge el modelo mylogit_enet_sens_min que es el que mejor ajusta 
 ##  Procedemos a realizar la predicci?n final de la variable categ?rica en la base de Test. 
 
-test_final$Pobre_classification<-predict(MODELOESCOGIDO,newdata=test_final)
+test_final$Pobre_classification<-predict(mylogit_enet_sens,newdata=test_final)
+
+
+test_final <- test_final %>% 
+  mutate(Pobre_classification = if_else(test_final$Pobre_classification=="Si", 1, 0))
+
+
 
 #Predicción final: 
 
 summary(test_final$Pobre_classification)
 
 
-
 ###############################
 ##Prediccion de ingreso########
 ###############################
 
-Regresiones
+#Regresiones
 #Ingreso en modelos de entrenamiento
 model1<-lm(Ingtotugarr~1, data=training) 
 model2<-lm(Ingtotugarr~P6040 + valor_arriendo + P5010 + P5000 + mujer, data=training) 
@@ -1565,7 +1704,9 @@ model4<-lm(Ingtotugarr~P6040 + valor_arriendo + P5010 + P5000 + mujer + per_cuar
 model5<-lm(Ingtotugarr~P6040 + valor_arriendo + P5010 + P5000 + mujer + per_cuarto + primaria + viv_propia + mujer:primaria + mujer:viv_propia + poly(P6040, 2), data=training) 
 model7<-lm(Ingtotugarr~P6040 + valor_arriendo + mujer + per_cuarto + primaria + viv_propia, data=training) 
 
-summary(model66)
+modelp<-lm(Ingtotugarr~P6040 + arriendo_per + per_cuarto + mujer, data=training) #prueba con las mismas variables de classification
+
+
 stargazer(model1, model2, model3, model4, model5, type="text")
 
 
@@ -1595,39 +1736,53 @@ mse6<-with (testing, mean((Ingtotugarr-model6)^2))
 testing$model7<-predict(model7,newdata=testing)
 mse7<-with (testing, mean((Ingtotugarr-model7)^2))
 
-#Vamos a comparar los diferentes MSE
-stargazer(mse1, mse2, mse3, mse4, mse5, mse6, mse66, type="text")
-allmse<-c(mse1,mse2,mse3,mse4,mse5,mse6, mse7)
+testing$modelp<-predict(modelp,newdata=testing)
+msep<-with (testing, mean((Ingtotugarr-modelp)^2))
 
-allmse1<-ggplot(mapping = aes(x=1:7, y=allmse))+
+
+#Vamos a comparar los diferentes MSE
+stargazer(mse1, mse2, mse3, mse4, mse5, mse6, msep, type="text")
+allmse<-c(mse1,mse2,mse3,mse4,mse5,mse6, mse7, msep)
+
+allmse1<-ggplot(mapping = aes(x=1:8, y=allmse))+
   geom_line(colour= "tomato")+
-              xlab("f(x)")+
-              ylab("MSE")+
-              ggtitle("comportamiento de f(x) para MSE")+
-              theme(plot.title = element_text(hjust = 0.5))+
-              scale_x_continuous(breaks = seq(1,11,1))
+  xlab("f(x)")+
+  ylab("MSE")+
+  ggtitle("comportamiento de f(x) para MSE")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  scale_x_continuous(breaks = seq(1,11,1))
 
 allmse1
+
 #Podemos ver que el modelo 5 es el que tiene el MSE mas pequeño. Pero el 4 es parecido y tiene menos variables
 ######Aqui ya podriamos llevar el 4 a test_final
 
-test_final$Pred_ingreso<-predict(model4,newdata=test_final)
+#prediccion de ingreso (regresiones)
 
 
-test_final$Pred_ingreso_f<-factor(ifelse(test_final$Pred_ingreso<=test_hogares$Lp,1,0))
-test_final$Pred_ingreso_f<- factor((test_final$Pred_ingreso_f), 
-                                            levels = c(0, 1), 
-                                            labels = c("No", "Si"))
+#en test_final
+test_final$Pred_ingreso<-predict(model4,newdata=test_final) #aqui llega el ingreso predicho
+test_final <- test_final %>% 
+  mutate(Pobre_income = if_else(test_final$Pred_ingreso<=(test_final$Lp * test_final$Nper), 1, 0)) #aqui lo transformamos con la ecuacion que ya habiamos hallado para que indique si el hogar esta por debajo de Lp o no
+
+
+#test_final$Pred_ingreso_f<-factor(ifelse(test_final$Pred_ingreso<=test_hogares$Lp,1,0))
+#test_final$Pred_ingreso_f<- factor((test_final$Pred_ingreso_f), 
+#                                            levels = c(0, 1), 
+#                                            labels = c("No", "Si"))
 
 
 
 ##########Archivo de predicciones
 id<-test_final$id
-Pobre_classification<-test_hogares$Pobre_classification
+Pobre_classification<-test_final$Pobre_classification
 Pobre_income<-test_final$Pobre_income
 Predicciones_finales<-data_frame(id,Pobre_classification,Pobre_income)
 summary(Predicciones_finales)
-write.csv(Predicciones_finales, file = "predicciones.csv")
+
+
+
+write.csv(Predicciones_finales, file = "predictions_cely_ospina_4.csv")
 
 ##########################################################################################################################
 ##########################################################################################################################
