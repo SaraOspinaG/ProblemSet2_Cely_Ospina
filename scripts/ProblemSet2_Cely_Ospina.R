@@ -1292,6 +1292,7 @@ mylogit_caret4 <- train(
 )
 mylogit_caret4
 
+
 #ROC       Sens       Spec       Accuracy   Kappa    
 #0.812844  0.7495998  0.7241224  0.7368611  0.4737222
 #Mejora mucho la sensibilidad, baja la especificidad y el accuracy pero nos castigan mas los falsos negativos
@@ -1316,6 +1317,7 @@ mylogit_enet_sens <- train(
 )
 
 mylogit_enet_sens
+
 #Sens was used to select the optimal model using the largest value.
 #The final values used for the model were alpha = 0.55 and lambda = 0.0002121025.
 #  alpha  lambda        ROC        Sens         Spec       Accuracy   Kappa     
@@ -1344,6 +1346,7 @@ mylogit_lasso_sens <- train(
 )
 
 mylogit_lasso_sens
+
 #Sens was used to select the optimal model using the largest value.
 #The final values used for the model were alpha = 0 and lambda = 0.01163476.
 #0.0116347639  0.8124338  0.1927314820  0.9760824  0.8246837  0.2309213723
@@ -1364,6 +1367,7 @@ mylogit_lasso_sens2 <- train(
 )
 
 mylogit_lasso_sens2
+
 #Sens was used to select the optimal model using the largest value.
 #The final values used for the model were alpha = 0 and lambda = 0.01163476.
 #0.0116347639  0.8124338  0.1927314820  0.9760824  0.8246837  0.2309213723
@@ -1384,6 +1388,7 @@ mylogit_lasso_sens3 <- train(
 )
 
 mylogit_lasso_sens3
+
 # 0.0185473910  0.8122824  0.7480501  0.7236331  0.7358416  0.4716832
 #lambda = 0.01854739
 
@@ -1465,34 +1470,93 @@ with (evalResults2,table(hogar_es_pobre,hat_def_rfThresh2))
 #Con el nuevo cutoff estamos obteniendo mas verdaderos si, tenemos mas falsos positivos pero menos falsos negativos. 
 #Lo que mas nos importa es predecir bien los pobres
 
+#Vamos a probarlo en testing 
+testResults <- data.frame(hogar_es_pobre = testing$hogar_es_pobre)
+
+summary(testing$hogar_es_pobre)
+
+#aqui no stoy segura si ponemos nombres nuevos o los nombres originales de los modelos 
+#por si algo: 
+
+#mylogit_caret
+#mylogit_caret2
+#mylogit_caret3
+#mylogit_caret4
+#mylogit_enet_sens
+#mylogit_lasso_sens
+#mylogit_lasso_sens2
+#mylogit_lasso_sens3
 
 
-#Comparamos los modelos
-##Se realizan las comparaciones
-#testResults <- data.frame(hogar_es_pobre = testing$hogar_es_pobre)
-#testResults$logit<- predict(mylogit_caret,
-#                            newdata = testing,
-#                            type = "prob")[,1]
-#testResults$lasso<- predict(mylogit_lasso_roc,
-#                            newdata = testing,
-#                            type = "prob")[,1]
-#testResults$lasso_thresh<- predict(mylogit_lasso_roc,
-#                                   newdata = testing,
-#                                   type = "prob")[,1]
-#testResults$lasso_upsample<- predict(mylogit_lasso_upsample,
-#                                     newdata = testing,
-#                                     type = "prob")[,1]
-#testResults$mylogit_lasso_downsample<- predict(mylogit_lasso_downsample,
-#                                               newdata = testing,
-#                                               type = "prob")[,1]
-#testResults$mylogit_lasso_smote<- predict(mylogit_lasso_smote,
-#                                          newdata = testing,
-#                                          type = "prob")[,1]
+testResults$logit1<- predict(mylogit_caret,
+                            newdata = testing,
+                            type = "prob")[,1]
+
+testResults$logit2<- predict(mylogit_caret2,
+                            newdata = testing,
+                            type = "prob")[,1]
+
+testResults$logit3<- predict(mylogit_caret3,
+                             newdata = testing,
+                             type = "prob")[,1]
+
+testResults$logit4<- predict(mylogit_caret4,
+                              newdata = testing,
+                              type = "prob")[,1]
+
+testResults$logit_enet<- predict(mylogit_enet_sens,
+                              newdata = testing,
+                              type = "prob")[,1]
+
+testResults$lasso1<- predict(mylogit_lasso_sens,
+                              newdata = testing,
+                              type = "prob")[,1]
+
+testResults$lasso2<- predict(mylogit_lasso_sens2,
+                              newdata = testing,
+                              type = "prob")[,1]
+
+testResults$lasso_upsample<- predict(mylogit_lasso_sens3,
+                              newdata = testing,
+                              type = "prob")[,1]
+
+testResults<-testResults %>%
+  mutate(logit1=ifelse(logit>rfThresh$threshold,"Si","No"),
+         logit2=ifelse(logit>rfThresh$threshold,"Si","No"),
+         logit3=ifelse(logit>rfThresh$threshold,"Si","No"),
+         logit4=ifelse(logit>rfThresh$threshold,"Si","No"),
+         logit_enet=ifelse(logit_enet>rfThresh$threshold,"Si","No"),
+         lasso1 =ifelse(lasso1>rfThresh$threshold,"Si","No"),
+         lasso2=ifelse(lasso2>rfThresh$threshold,"Si","No"),
+         lasso_upsample=ifelse(lasso_upsample>rfThresh$threshold,"Si","No"),
+  )
+
+with(testResults,table(hogar_es_pobre,logit1))
+with(testResults,table(hogar_es_pobre,logit2))
+with(testResults,table(hogar_es_pobre,logit3))
+with(testResults,table(hogar_es_pobre,logit4))
+with(testResults,table(hogar_es_pobre,logit_enet))
+with(testResults,table(hogar_es_pobre,lasso1))
+with(testResults,table(hogar_es_pobre,lasso2))
+with(testResults,table(hogar_es_pobre,lasso_upsample))
+
+
+##  con base en esto se escoge el modelo XXXX que es el que mejor ajusta 
+##  Procedemos a realizar la predicci?n final de la variable categ?rica en la base de Test. 
+
+test_final$Pobre_classification<-predict(MODELOESCOGIDO,newdata=test_final)
+
+#Predicción final: 
+
+summary(test_final$Pobre_classification)
 
 
 
+###############################
+##Prediccion de ingreso########
+###############################
 
-##5. Regresiones
+Regresiones
 #Ingreso en modelos de entrenamiento
 model1<-lm(Ingtotugarr~1, data=training) 
 model2<-lm(Ingtotugarr~P6040 + valor_arriendo + P5010 + P5000 + mujer, data=training) 
@@ -1545,40 +1609,28 @@ allmse1<-ggplot(mapping = aes(x=1:7, y=allmse))+
 
 allmse1
 #Podemos ver que el modelo 5 es el que tiene el MSE mas pequeño. Pero el 4 es parecido y tiene menos variables
+######Aqui ya podriamos llevar el 4 a test_final
 
-#######Modelo Lasso
-
-library(glmnet)
-
-df_coeficientes <- model4$coefficients %>%
-  enframe(name = "predictor", value = "coeficiente")
-
-df_coeficientes %>%
-  filter(predictor != "(Intercept)") %>%
-  ggplot(aes(x = predictor, y = coeficiente)) +
-  geom_col() +
-  labs(title = "Coeficientes del modelo OLS") +
-  theme_bw() +
-  theme(axis.text.x = element_text(size = 5, angle = 45))
+test_final$Pred_ingreso<-predict(model4,newdata=test_final)
 
 
-x_train <- model.matrix(Ingtotugarr~ P6040 + valor_arriendo + P5010 + P5000 + mujer + per_cuarto + primaria + viv_propia,data = train_hogares)[, -1]
-y_train <- train_hogares$Ingtotugarr
+test_final$Pred_ingreso_f<-factor(ifelse(test_final$Pred_ingreso<=test_hogares$Lp,1,0))
+test_final$Pred_ingreso_f<- factor((test_final$Pred_ingreso_f), 
+                                            levels = c(0, 1), 
+                                            labels = c("No", "Si"))
 
 
-modelo <- glmnet(
-  x           = x_train,
-  y           = Y_train,
-  alpha       = 1,
-  nlambda     = 100,
-  standardize = TRUE
-)
 
+##########Archivo de predicciones
+id<-test_final$id
+Pobre_classification<-test_hogares$Pobre_classification
+Pobre_income<-test_final$Pobre_income
+Predicciones_finales<-data_frame(id,Pobre_classification,Pobre_income)
+summary(Predicciones_finales)
+write.csv(Predicciones_finales, file = "predicciones.csv")
 
-P6040 + valor_arriendo + P5010 + P5000 + mujer + per_cuarto + primaria + viv_propia
-
-
-training %>%   select(hogarpobre, mujer, P6040, P6210, arriendo_per, per_cuarto, Ingtotugarr) %>%   tbl_summary(by=mujer)
-
+##########################################################################################################################
+##########################################################################################################################
+##########################################################################################################################
 
 
